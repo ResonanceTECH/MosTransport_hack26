@@ -25,7 +25,13 @@ export function ProtectedRoute() {
 export function RoleGuard({ roles }: { roles: AppRole[] }) {
   const { hasRole } = useAuth()
   if (!roles.some((role) => hasRole(role))) {
-    return <Navigate to="/forbidden" replace />
+    return (
+      <Navigate
+        to="/forbidden"
+        replace
+        state={{ requiredRole: roles.includes('admin') ? 'admin' : roles[0] }}
+      />
+    )
   }
   return <Outlet />
 }
