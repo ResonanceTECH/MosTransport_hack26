@@ -19,7 +19,7 @@ const DEMO_USERS: Record<string, { password: string; user: AppUser }> = {
     password: 'dispatcher',
     user: {
       username: 'demo_dispatcher',
-      name: 'Диспетчер (демо)',
+      name: 'Иван Петров',
       roles: ['dispatcher'],
     },
   },
