@@ -1,0 +1,738 @@
+openapi: 3.0.3
+info:
+  title: MosTransport Tram Load Forecast API
+  version: 1.0.0
+  description: API for AI forecast of tram route passenger load (hackathon).
+servers:
+  - url: /api/v1
+paths:
+  /routes:
+    get:
+      operationId: listRoutes
+      summary: List tram routes
+      tags: [routes]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteListResponse'
+  /routes/{id}:
+    get:
+      operationId: getRoute
+      summary: Get route details with stops
+      tags: [routes]
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /routes/{id}/geometry:
+    get:
+      operationId: getRouteGeometry
+      summary: Get route geometry (GeoJSON)
+      tags: [routes]
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteGeometry'
+  /forecast:
+    get:
+      operationId: getForecast
+      summary: Time series / aggregated forecast
+      tags: [forecast]
+      parameters:
+        - $ref: '#/components/parameters/RouteIds'
+        - $ref: '#/components/parameters/Horizon'
+        - $ref: '#/components/parameters/Date'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+        - $ref: '#/components/parameters/StopId'
+        - $ref: '#/components/parameters/SegmentFrom'
+        - $ref: '#/components/parameters/SegmentTo'
+        - $ref: '#/components/parameters/TimeFrom'
+        - $ref: '#/components/parameters/TimeTo'
+        - $ref: '#/components/parameters/Grouping'
+        - $ref: '#/components/parameters/Hour'
+        - $ref: '#/components/parameters/Coefficients'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /forecast/map:
+    get:
+      operationId: getForecastMap
+      summary: Map points with load per stop for a given hour
+      tags: [forecast]
+      parameters:
+        - $ref: '#/components/parameters/RouteIds'
+        - $ref: '#/components/parameters/Horizon'
+        - $ref: '#/components/parameters/Date'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+        - $ref: '#/components/parameters/Hour'
+        - $ref: '#/components/parameters/SegmentFrom'
+        - $ref: '#/components/parameters/SegmentTo'
+        - $ref: '#/components/parameters/Coefficients'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastMapResponse'
+  /forecast/heatmap:
+    get:
+      operationId: getForecastHeatmap
+      summary: Heatmap stop x hour
+      tags: [forecast]
+      parameters:
+        - $ref: '#/components/parameters/RouteIds'
+        - $ref: '#/components/parameters/Horizon'
+        - $ref: '#/components/parameters/Date'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+        - $ref: '#/components/parameters/SegmentFrom'
+        - $ref: '#/components/parameters/SegmentTo'
+        - $ref: '#/components/parameters/Coefficients'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeatmapResponse'
+  /forecast/kpi:
+    get:
+      operationId: getForecastKpi
+      summary: KPI for current filters
+      tags: [forecast]
+      parameters:
+        - $ref: '#/components/parameters/RouteIds'
+        - $ref: '#/components/parameters/Horizon'
+        - $ref: '#/components/parameters/Date'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+        - $ref: '#/components/parameters/StopId'
+        - $ref: '#/components/parameters/SegmentFrom'
+        - $ref: '#/components/parameters/SegmentTo'
+        - $ref: '#/components/parameters/TimeFrom'
+        - $ref: '#/components/parameters/TimeTo'
+        - $ref: '#/components/parameters/Hour'
+        - $ref: '#/components/parameters/Coefficients'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KpiResponse'
+  /forecast/export:
+    get:
+      operationId: exportForecast
+      summary: Export forecast as CSV or XLSX
+      tags: [forecast]
+      parameters:
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [csv, xlsx]
+        - $ref: '#/components/parameters/RouteIds'
+        - $ref: '#/components/parameters/Horizon'
+        - $ref: '#/components/parameters/Date'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+        - $ref: '#/components/parameters/StopId'
+        - $ref: '#/components/parameters/SegmentFrom'
+        - $ref: '#/components/parameters/SegmentTo'
+        - $ref: '#/components/parameters/TimeFrom'
+        - $ref: '#/components/parameters/TimeTo'
+        - $ref: '#/components/parameters/Grouping'
+        - $ref: '#/components/parameters/Coefficients'
+      responses:
+        '200':
+          description: File download
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+  /factors:
+    get:
+      operationId: getFactors
+      summary: Coefficient presets and external sources
+      tags: [factors]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FactorsResponse'
+  /model/info:
+    get:
+      operationId: getModelInfo
+      summary: Model metadata and metrics
+      tags: [model]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelInfo'
+  /forecast/recompute:
+    post:
+      operationId: recomputeForecast
+      summary: Trigger forecast recompute (admin)
+      tags: [admin]
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecomputeResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /telemetry:
+    post:
+      operationId: postTelemetry
+      summary: Batch client telemetry
+      tags: [telemetry]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetryBatch'
+      responses:
+        '204':
+          description: No Content
+  /user-scenarios:
+    get:
+      operationId: listUserScenarios
+      summary: List saved coefficient scenarios
+      tags: [scenarios]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserScenarioList'
+    post:
+      operationId: createUserScenario
+      summary: Save coefficient scenario
+      tags: [scenarios]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserScenarioCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserScenario'
+  /user-scenarios/{id}:
+    delete:
+      operationId: deleteUserScenario
+      summary: Delete scenario
+      tags: [scenarios]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+components:
+  parameters:
+    RouteId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    RouteIds:
+      name: route
+      in: query
+      required: true
+      schema:
+        type: string
+      description: Comma-separated route ids
+    Horizon:
+      name: horizon
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/Horizon'
+    Date:
+      name: date
+      in: query
+      schema:
+        type: string
+        format: date
+    DateFrom:
+      name: date_from
+      in: query
+      schema:
+        type: string
+        format: date
+    DateTo:
+      name: date_to
+      in: query
+      schema:
+        type: string
+        format: date
+    StopId:
+      name: stop
+      in: query
+      schema:
+        type: string
+    SegmentFrom:
+      name: segment_from
+      in: query
+      schema:
+        type: string
+    SegmentTo:
+      name: segment_to
+      in: query
+      schema:
+        type: string
+    TimeFrom:
+      name: from
+      in: query
+      schema:
+        type: string
+        pattern: '^\d{2}:\d{2}$'
+    TimeTo:
+      name: to
+      in: query
+      schema:
+        type: string
+        pattern: '^\d{2}:\d{2}$'
+    Grouping:
+      name: grouping
+      in: query
+      schema:
+        $ref: '#/components/schemas/Grouping'
+    Hour:
+      name: hour
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 23
+    Coefficients:
+      name: k_weather
+      in: query
+      schema:
+        type: number
+      description: Also accept k_event, k_season, k_traffic as sibling query params
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ServiceUnavailable:
+      description: Service unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    Horizon:
+      type: string
+      enum: [day, month, year]
+    Grouping:
+      type: string
+      enum: [route, stop, segment]
+    LoadLevel:
+      type: string
+      enum: [low, medium, high]
+    ApiError:
+      type: object
+      required: [message, request_id]
+      properties:
+        message:
+          type: string
+        request_id:
+          type: string
+        code:
+          type: string
+    ForecastMeta:
+      type: object
+      properties:
+        external_data_stale:
+          type: boolean
+        estimated:
+          type: boolean
+          description: True for month/year horizons
+        request_id:
+          type: string
+    Coefficients:
+      type: object
+      properties:
+        k_weather:
+          type: number
+          default: 1
+        k_event:
+          type: number
+          default: 1
+        k_season:
+          type: number
+          default: 1
+        k_traffic:
+          type: number
+          default: 1
+    RouteSummary:
+      type: object
+      required: [id, name, number]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        number:
+          type: string
+    RouteListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteSummary'
+    Stop:
+      type: object
+      required: [id, name, lat, lon, sequence]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        lat:
+          type: number
+        lon:
+          type: number
+        sequence:
+          type: integer
+    RouteDetail:
+      allOf:
+        - $ref: '#/components/schemas/RouteSummary'
+        - type: object
+          required: [stops]
+          properties:
+            stops:
+              type: array
+              items:
+                $ref: '#/components/schemas/Stop'
+    RouteGeometry:
+      type: object
+      required: [route_id, type, coordinates]
+      properties:
+        route_id:
+          type: string
+        type:
+          type: string
+          enum: [LineString]
+        coordinates:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+            minItems: 2
+            maxItems: 2
+    TimeSeriesPoint:
+      type: object
+      required: [ts, baseline, adjusted]
+      properties:
+        ts:
+          type: string
+        baseline:
+          type: number
+        adjusted:
+          type: number
+        actual:
+          type: number
+          nullable: true
+    ForecastResponse:
+      type: object
+      required: [series, meta]
+      properties:
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeSeriesPoint'
+        meta:
+          $ref: '#/components/schemas/ForecastMeta'
+        effect:
+          $ref: '#/components/schemas/CoefficientEffect'
+    CoefficientEffect:
+      type: object
+      properties:
+        delta_percent:
+          type: number
+        delta_passengers:
+          type: number
+    MapStopLoad:
+      type: object
+      required: [stop_id, name, lat, lon, load, level, sequence]
+      properties:
+        stop_id:
+          type: string
+        name:
+          type: string
+        lat:
+          type: number
+        lon:
+          type: number
+        load:
+          type: number
+        level:
+          $ref: '#/components/schemas/LoadLevel'
+        sequence:
+          type: integer
+        baseline_load:
+          type: number
+    ForecastMapResponse:
+      type: object
+      required: [stops, hour, meta]
+      properties:
+        stops:
+          type: array
+          items:
+            $ref: '#/components/schemas/MapStopLoad'
+        hour:
+          type: integer
+        meta:
+          $ref: '#/components/schemas/ForecastMeta'
+        effect:
+          $ref: '#/components/schemas/CoefficientEffect'
+    HeatmapCell:
+      type: object
+      required: [stop_id, hour, value]
+      properties:
+        stop_id:
+          type: string
+        hour:
+          type: integer
+        value:
+          type: number
+    HeatmapResponse:
+      type: object
+      required: [stops, cells, meta]
+      properties:
+        stops:
+          type: array
+          items:
+            type: object
+            required: [id, name, sequence]
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              sequence:
+                type: integer
+        cells:
+          type: array
+          items:
+            $ref: '#/components/schemas/HeatmapCell'
+        meta:
+          $ref: '#/components/schemas/ForecastMeta'
+    KpiResponse:
+      type: object
+      required: [total_passengers, peak_hour, busiest_stop, meta]
+      properties:
+        total_passengers:
+          type: number
+        peak_hour:
+          type: integer
+        peak_hour_load:
+          type: number
+        busiest_stop:
+          type: object
+          required: [id, name, load]
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            load:
+              type: number
+        delta_vs_baseline_percent:
+          type: number
+        meta:
+          $ref: '#/components/schemas/ForecastMeta'
+        effect:
+          $ref: '#/components/schemas/CoefficientEffect'
+    FactorPreset:
+      type: object
+      required: [id, name, coefficients]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        coefficients:
+          $ref: '#/components/schemas/Coefficients'
+    ExternalSource:
+      type: object
+      required: [name, url]
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+        description:
+          type: string
+    FactorsResponse:
+      type: object
+      required: [presets, sources, defaults]
+      properties:
+        presets:
+          type: array
+          items:
+            $ref: '#/components/schemas/FactorPreset'
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalSource'
+        defaults:
+          $ref: '#/components/schemas/Coefficients'
+    ModelInfo:
+      type: object
+      required: [name, version, trained_at, wape, scope, limitations]
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        trained_at:
+          type: string
+          format: date-time
+        wape:
+          type: number
+        wape_by_horizon:
+          type: object
+          additionalProperties:
+            type: number
+        scope:
+          type: string
+        limitations:
+          type: array
+          items:
+            type: string
+    RecomputeResponse:
+      type: object
+      required: [job_id, status]
+      properties:
+        job_id:
+          type: string
+        status:
+          type: string
+    TelemetryEvent:
+      type: object
+      required: [type, ts]
+      properties:
+        type:
+          type: string
+        ts:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+    TelemetryBatch:
+      type: object
+      required: [events]
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelemetryEvent'
+    UserScenario:
+      type: object
+      required: [id, user_id, name, coefficients, created_at]
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+        coefficients:
+          $ref: '#/components/schemas/Coefficients'
+        created_at:
+          type: string
+          format: date-time
+    UserScenarioCreate:
+      type: object
+      required: [name, coefficients]
+      properties:
+        name:
+          type: string
+        coefficients:
+          $ref: '#/components/schemas/Coefficients'
+    UserScenarioList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserScenario'

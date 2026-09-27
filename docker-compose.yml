@@ -1,0 +1,217 @@
+name: mos-transport
+
+# Published host ports:
+#   Frontend 443 | Backend 1000 | ETL 1010 | ML 1020
+#   Service DB 1030 | Logs DB 8000 | Prometheus 8010 | Grafana 8020
+
+x-logs-db-client: &logs-db-client
+  LOGS_DB_HOST: logs-db
+  LOGS_DB_PORT: "8000"
+  LOGS_DB_NAME: ${LOGS_DB_NAME}
+  LOGS_WRITER_USER: ${LOGS_WRITER_USER}
+  LOGS_WRITER_PASSWORD: ${LOGS_WRITER_PASSWORD}
+
+services:
+  service-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${SERVICE_DB_NAME}
+      POSTGRES_USER: ${SERVICE_DB_ADMIN_USER}
+      POSTGRES_PASSWORD: ${SERVICE_DB_ADMIN_PASSWORD}
+      PGPORT: "1030"
+      SERVICE_DB_PORT: "1030"
+      SERVICE_ETL_USER: ${SERVICE_ETL_USER}
+      SERVICE_ETL_PASSWORD: ${SERVICE_ETL_PASSWORD}
+      SERVICE_BACKEND_USER: ${SERVICE_BACKEND_USER}
+      SERVICE_BACKEND_PASSWORD: ${SERVICE_BACKEND_PASSWORD}
+      SERVICE_GRAFANA_USER: ${SERVICE_GRAFANA_USER}
+      SERVICE_GRAFANA_PASSWORD: ${SERVICE_GRAFANA_PASSWORD}
+    command:
+      - postgres
+      - -c
+      - "shared_buffers=256MB"
+      - -c
+      - "work_mem=8MB"
+      - -c
+      - "effective_cache_size=768MB"
+      - -c
+      - "max_connections=60"
+    ports:
+      - "1030:1030"
+    volumes:
+      - service-db-data:/var/lib/postgresql/data
+      - ./infra/db/service/001_service_schema.sql:/docker-entrypoint-initdb.d/001_service_schema.sql:ro
+      - ./infra/db/service/002_create_login_roles.sh:/docker-entrypoint-initdb.d/002_create_login_roles.sh:ro
+      - ./infra/db/service/003_views.sql:/docker-entrypoint-initdb.d/003_views.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -p 1030 -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [app]
+
+  logs-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${LOGS_DB_NAME}
+      POSTGRES_USER: ${LOGS_ADMIN_USER}
+      POSTGRES_PASSWORD: ${LOGS_ADMIN_PASSWORD}
+      PGPORT: "8000"
+      LOGS_WRITER_USER: ${LOGS_WRITER_USER}
+      LOGS_WRITER_PASSWORD: ${LOGS_WRITER_PASSWORD}
+      LOGS_GRAFANA_USER: ${LOGS_GRAFANA_USER}
+      LOGS_GRAFANA_PASSWORD: ${LOGS_GRAFANA_PASSWORD}
+      LOGS_MAINTENANCE_USER: ${LOGS_MAINTENANCE_USER}
+      LOGS_MAINTENANCE_PASSWORD: ${LOGS_MAINTENANCE_PASSWORD}
+    command: [postgres, -c, shared_buffers=128MB, -c, max_connections=40]
+    ports:
+      - "8000:8000"
+    volumes:
+      - logs-db-data:/var/lib/postgresql/data
+      - ./infra/db/logs/001_logs_schema.sql:/docker-entrypoint-initdb.d/001_logs_schema.sql:ro
+      - ./infra/db/logs/002_create_login_roles.sh:/docker-entrypoint-initdb.d/002_create_login_roles.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -p 8000 -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [app]
+
+  etl:
+    build:
+      context: .
+      dockerfile: Backend/etl/Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *logs-db-client
+      ETL_SERVICE_DATABASE_URL: postgresql://${SERVICE_ETL_USER}:${SERVICE_ETL_PASSWORD}@service-db:1030/${SERVICE_DB_NAME}
+      ETL_DATASET_PATH: /app/data/dataset_hourly.parquet
+      ETL_AUTO_INGEST: "true"
+      ETL_LOG_LEVEL: INFO
+    ports:
+      - "1010:1010"
+    depends_on:
+      service-db:
+        condition: service_healthy
+      logs-db:
+        condition: service_healthy
+    networks: [app]
+
+  ml:
+    build:
+      context: .
+      dockerfile: SOLUTION/Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *logs-db-client
+      MODEL_PATH: /app/model/model.pkl
+      PORT: "1020"
+      OMP_NUM_THREADS: "4"
+    ports:
+      - "1020:1020"
+    depends_on:
+      logs-db:
+        condition: service_healthy
+    networks: [app]
+
+  backend:
+    build:
+      context: .
+      dockerfile: Backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *logs-db-client
+      BACKEND_ETL_SERVICE_URL: http://etl:1010
+      BACKEND_ML_SERVICE_URL: http://ml:1020
+      BACKEND_LOG_LEVEL: INFO
+      BACKEND_CORS_ALLOWED_ORIGINS: ""
+    ports:
+      - "1000:1000"
+    depends_on:
+      etl:
+        condition: service_healthy
+      ml:
+        condition: service_healthy
+      logs-db:
+        condition: service_healthy
+    networks: [app]
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_USE_MSW: "false"
+        VITE_DEMO_AUTH: "true"
+    restart: unless-stopped
+    environment:
+      API_BASE_URL: /api/v1
+      KEYCLOAK_URL: ""
+      KEYCLOAK_REALM: transport
+      KEYCLOAK_CLIENT_ID: web
+      USE_MSW: "false"
+      DEMO_AUTH: "true"
+      GRAFANA_URL: http://localhost:8020
+      MAP_STYLE_URL: https://basemaps.cartocdn.com/gl/positron-gl-style/style.json
+      DEFAULT_DATE: ${UI_DEFAULT_DATE:-2025-11-05}
+      DEFAULT_ROUTE: ${UI_DEFAULT_ROUTE:-17}
+    ports:
+      - "443:443"
+      - "8081:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks: [app]
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.listen-address=:8010
+      - --web.enable-lifecycle
+    ports:
+      - "8010:8010"
+    volumes:
+      - ./infra/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    networks: [app]
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    restart: unless-stopped
+    environment:
+      GF_SERVER_HTTP_PORT: "8020"
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      LOGS_DB_NAME: ${LOGS_DB_NAME}
+      LOGS_GRAFANA_USER: ${LOGS_GRAFANA_USER}
+      LOGS_GRAFANA_PASSWORD: ${LOGS_GRAFANA_PASSWORD}
+      SERVICE_DB_NAME: ${SERVICE_DB_NAME}
+      SERVICE_GRAFANA_USER: ${SERVICE_GRAFANA_USER}
+      SERVICE_GRAFANA_PASSWORD: ${SERVICE_GRAFANA_PASSWORD}
+    ports:
+      - "8020:8020"
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks: [app]
+
+volumes:
+  service-db-data:
+  logs-db-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  app:
+    driver: bridge
