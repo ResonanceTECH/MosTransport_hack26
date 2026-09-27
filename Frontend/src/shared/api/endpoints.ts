@@ -66,7 +66,9 @@ export const api = {
   getModelInfo: () => apiRequest<ModelInfo>('/model/info'),
 
   recomputeForecast: () =>
-    apiRequest<{ job_id: string; status: string }>('/forecast/recompute', { method: 'POST' }),
+    apiRequest<components['schemas']['RecomputeResponse']>('/forecast/recompute', {
+      method: 'POST',
+    }),
 
   exportForecast: async (params: ForecastQuery & { format: 'csv' | 'xlsx' }) => {
     const { format, ...rest } = params
