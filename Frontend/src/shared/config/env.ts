@@ -45,7 +45,7 @@ function readConfig(): AppRuntimeConfig {
     KEYCLOAK_CLIENT_ID: runtime.KEYCLOAK_CLIENT_ID || env.VITE_KEYCLOAK_CLIENT_ID || 'web',
     USE_MSW: asBool(runtime.USE_MSW ?? env.VITE_USE_MSW, true),
     DEMO_AUTH: asBool(runtime.DEMO_AUTH ?? env.VITE_DEMO_AUTH, true),
-    GRAFANA_URL: runtime.GRAFANA_URL || env.VITE_GRAFANA_URL || 'http://localhost:3000',
+    GRAFANA_URL: runtime.GRAFANA_URL || env.VITE_GRAFANA_URL || '',
     MAP_STYLE_URL:
       runtime.MAP_STYLE_URL ||
       env.VITE_MAP_STYLE_URL ||
