@@ -1,9 +1,13 @@
 import { createTheme, type ThemeOptions } from '@mui/material/styles'
+import { brand, CARD_SHADOW, LOAD_COLORS } from '@/shared/theme/brand'
+import { brandControlOverrides } from '@/shared/theme/controls'
+
+export { brand, CARD_SHADOW, LOAD_COLORS }
 
 /** Dispatcher dashboard — urban transport analytics (MUI + GIS density) */
 const base: ThemeOptions = {
   typography: {
-    fontFamily: '"Inter", "IBM Plex Sans", system-ui, -apple-system, sans-serif',
+    fontFamily: brand.fontApp,
     h1: { fontWeight: 700, letterSpacing: '-0.02em' },
     h2: { fontWeight: 700, letterSpacing: '-0.02em' },
     h3: { fontWeight: 700 },
@@ -14,7 +18,7 @@ const base: ThemeOptions = {
     subtitle2: { fontWeight: 600 },
     button: { textTransform: 'none', fontWeight: 600 },
   },
-  shape: { borderRadius: 14 },
+  shape: { borderRadius: brand.radiusPaper },
 }
 
 export const lightTheme = createTheme({
@@ -22,59 +26,47 @@ export const lightTheme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#2867D8',
-      dark: '#1F56B8',
-      light: '#4B82E3',
-      contrastText: '#FFFFFF',
+      main: brand.primary,
+      dark: brand.primaryHover,
+      light: brand.primaryLight,
+      contrastText: brand.contrast,
     },
     secondary: {
-      main: '#1A4FA0',
-      contrastText: '#FFFFFF',
+      main: brand.secondary,
+      contrastText: brand.contrast,
     },
     background: {
-      default: '#F6F9FD',
-      paper: '#FFFFFF',
+      default: brand.bgApp,
+      paper: brand.paper,
     },
     text: {
-      primary: '#0A1F44',
-      secondary: '#6B819C',
+      primary: brand.textApp,
+      secondary: brand.textMuted,
     },
-    divider: '#D7E0EC',
-    success: { main: '#2E9E6B' },
-    warning: { main: '#E5A000' },
-    error: { main: '#D64545' },
-    info: { main: '#2867D8' },
+    divider: brand.divider,
+    success: { main: brand.load.low },
+    warning: { main: brand.load.medium },
+    error: { main: brand.load.high },
+    info: { main: brand.primary },
     action: {
-      hover: 'rgba(40, 103, 216, 0.04)',
-      selected: 'rgba(40, 103, 216, 0.08)',
+      hover: brand.primarySoft,
+      selected: brand.primarySelected,
     },
   },
   components: {
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          backgroundColor: '#F6F9FD',
+          backgroundColor: brand.bgApp,
         },
       },
     },
     MuiButton: {
       styleOverrides: {
-        root: {
-          borderRadius: 12,
-          boxShadow: 'none',
-          '&:hover': { boxShadow: 'none' },
-        },
-        containedPrimary: {
-          backgroundColor: '#2867D8',
-          '&:hover': { backgroundColor: '#1F56B8' },
-        },
+        ...brandControlOverrides.MuiButton.styleOverrides,
         outlined: {
-          borderColor: '#B9C5D8',
-          color: '#0A1F44',
-          '&:hover': {
-            borderColor: '#2867D8',
-            backgroundColor: 'rgba(40, 103, 216, 0.04)',
-          },
+          ...brandControlOverrides.MuiButton.styleOverrides.outlined,
+          color: brand.textApp,
         },
       },
     },
@@ -83,9 +75,9 @@ export const lightTheme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
-          border: '1px solid rgba(215, 224, 236, 0.7)',
-          boxShadow: '0 4px 18px rgba(31, 70, 120, 0.05)',
-          borderRadius: 14,
+          border: `1px solid ${brand.borderPaper}`,
+          boxShadow: CARD_SHADOW,
+          borderRadius: brand.radiusPaper,
         },
       },
     },
@@ -93,18 +85,18 @@ export const lightTheme = createTheme({
       defaultProps: { elevation: 0 },
       styleOverrides: {
         root: {
-          border: '1px solid rgba(215, 224, 236, 0.7)',
-          boxShadow: '0 4px 18px rgba(31, 70, 120, 0.05)',
-          borderRadius: 14,
+          border: `1px solid ${brand.borderPaper}`,
+          boxShadow: CARD_SHADOW,
+          borderRadius: brand.radiusPaper,
         },
       },
     },
     MuiAppBar: {
       styleOverrides: {
         root: {
-          backgroundColor: '#FFFFFF',
-          color: '#0A1F44',
-          borderBottom: '1px solid #D7E0EC',
+          backgroundColor: brand.paper,
+          color: brand.textApp,
+          borderBottom: `1px solid ${brand.divider}`,
           boxShadow: '0 1px 0 rgba(31, 70, 120, 0.04)',
         },
       },
@@ -122,9 +114,9 @@ export const lightTheme = createTheme({
           borderRadius: 10,
           px: 1.5,
           '&.Mui-selected': {
-            backgroundColor: '#2867D8',
-            color: '#fff',
-            '&:hover': { backgroundColor: '#1F56B8' },
+            backgroundColor: brand.primary,
+            color: brand.contrast,
+            '&:hover': { backgroundColor: brand.primaryHover },
           },
         },
       },
@@ -132,8 +124,8 @@ export const lightTheme = createTheme({
     MuiToggleButtonGroup: {
       styleOverrides: {
         root: {
-          backgroundColor: '#EEF3FA',
-          borderRadius: 12,
+          backgroundColor: brand.segment,
+          borderRadius: brand.radiusControl,
           padding: 3,
           gap: 2,
           '& .MuiToggleButton-root': {
@@ -145,24 +137,11 @@ export const lightTheme = createTheme({
     },
     MuiSlider: {
       styleOverrides: {
-        root: { color: '#2867D8' },
+        root: { color: brand.primary },
         rail: { opacity: 0.25 },
       },
     },
-    MuiOutlinedInput: {
-      styleOverrides: {
-        root: {
-          borderRadius: 12,
-          backgroundColor: '#FFFFFF',
-          '& .MuiOutlinedInput-notchedOutline': { borderColor: '#D6DEEA' },
-          '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#2867D8' },
-          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#2867D8',
-            borderWidth: 1.5,
-          },
-        },
-      },
-    },
+    MuiOutlinedInput: brandControlOverrides.MuiOutlinedInput,
     MuiTab: {
       styleOverrides: {
         root: {
@@ -180,24 +159,24 @@ export const darkTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#4B82E3',
-      dark: '#2867D8',
-      light: '#7BA4EC',
-      contrastText: '#FFFFFF',
+      main: brand.dark.primary,
+      dark: brand.primary,
+      light: brand.dark.primaryLight,
+      contrastText: brand.contrast,
     },
     background: {
-      default: '#0B1526',
-      paper: '#132038',
+      default: brand.dark.bg,
+      paper: brand.dark.paper,
     },
     text: {
-      primary: '#E8EEF7',
-      secondary: '#9BB0C8',
+      primary: brand.dark.text,
+      secondary: brand.dark.textSecondary,
     },
-    divider: '#243552',
-    success: { main: '#3CB87A' },
-    warning: { main: '#E5A000' },
-    error: { main: '#E05A5A' },
-    info: { main: '#4B82E3' },
+    divider: brand.dark.divider,
+    success: { main: brand.dark.success },
+    warning: { main: brand.load.medium },
+    error: { main: brand.dark.error },
+    info: { main: brand.dark.primary },
   },
   components: {
     MuiPaper: {
@@ -205,24 +184,24 @@ export const darkTheme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
-          border: '1px solid #243552',
-          boxShadow: '0 4px 18px rgba(0, 0, 0, 0.25)',
-          borderRadius: 14,
+          border: `1px solid ${brand.dark.divider}`,
+          boxShadow: brand.dark.shadowPaper,
+          borderRadius: brand.radiusPaper,
         },
       },
     },
     MuiAppBar: {
       styleOverrides: {
         root: {
-          backgroundColor: '#132038',
-          color: '#E8EEF7',
-          borderBottom: '1px solid #243552',
+          backgroundColor: brand.dark.paper,
+          color: brand.dark.text,
+          borderBottom: `1px solid ${brand.dark.divider}`,
         },
       },
     },
     MuiButton: {
       styleOverrides: {
-        root: { borderRadius: 12, boxShadow: 'none' },
+        root: { borderRadius: brand.radiusButton, boxShadow: 'none' },
       },
     },
   },
@@ -230,11 +209,3 @@ export const darkTheme = createTheme({
 
 /** @deprecated use lightTheme via ColorModeProvider */
 export const theme = lightTheme
-
-export const LOAD_COLORS = {
-  low: '#2E9E6B',
-  medium: '#E5A000',
-  high: '#D64545',
-} as const
-
-export const CARD_SHADOW = '0 4px 18px rgba(31, 70, 120, 0.05)'
