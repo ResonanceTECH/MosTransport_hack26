@@ -1,80 +1,61 @@
 import { createTheme } from '@mui/material/styles'
+import { brand } from '@/shared/theme/brand'
+import { brandControlOverrides } from '@/shared/theme/controls'
 
+/**
+ * Auth/login surface theme — same brand tokens as lightTheme,
+ * tighter auth-specific text/bg + form control polish.
+ */
 export const loginTheme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#2867D8',
-      dark: '#1F56B8',
-      light: '#4B82E3',
-      contrastText: '#FFFFFF',
+      main: brand.primary,
+      dark: brand.primaryHover,
+      light: brand.primaryLight,
+      contrastText: brand.contrast,
     },
     text: {
-      primary: '#07162F',
-      secondary: '#7B879D',
+      primary: brand.text,
+      secondary: brand.textSecondaryLogin,
     },
     background: {
-      default: '#F5F9FE',
-      paper: '#FFFFFF',
+      default: brand.bg,
+      paper: brand.paper,
     },
-    divider: '#D7E0EC',
+    divider: brand.divider,
     action: {
-      hover: 'rgba(40, 103, 216, 0.04)',
+      hover: brand.primarySoft,
     },
   },
   typography: {
-    fontFamily: '"Inter", system-ui, -apple-system, sans-serif',
+    fontFamily: brand.font,
     button: {
       textTransform: 'none',
       fontWeight: 600,
     },
   },
   shape: {
-    borderRadius: 12,
+    borderRadius: brand.radiusControl,
   },
   components: {
     MuiButton: {
       styleOverrides: {
-        root: {
-          borderRadius: 10,
-          boxShadow: 'none',
-          '&:hover': { boxShadow: 'none' },
-        },
-        containedPrimary: {
-          backgroundColor: '#2867D8',
-          '&:hover': { backgroundColor: '#1F56B8' },
-        },
+        ...brandControlOverrides.MuiButton.styleOverrides,
         outlined: {
-          borderColor: '#B9C5D8',
-          color: '#101A30',
-          '&:hover': {
-            borderColor: '#2867D8',
-            backgroundColor: 'rgba(40, 103, 216, 0.04)',
-          },
+          ...brandControlOverrides.MuiButton.styleOverrides.outlined,
+          color: brand.textButton,
         },
       },
     },
     MuiOutlinedInput: {
       styleOverrides: {
-        root: {
-          borderRadius: 12,
-          backgroundColor: '#FFFFFF',
-          '& .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#D6DEEA',
-          },
-          '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#2867D8',
-          },
-          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#2867D8',
-            borderWidth: 1.5,
-          },
-        },
+        ...brandControlOverrides.MuiOutlinedInput.styleOverrides,
         input: {
           padding: '16px 14px',
           fontSize: 15,
           '&::placeholder': {
-            color: '#8B96AA',
+            color: brand.textPlaceholder,
             opacity: 1,
           },
         },
@@ -83,15 +64,15 @@ export const loginTheme = createTheme({
     MuiCheckbox: {
       styleOverrides: {
         root: {
-          color: '#B9C5D8',
-          '&.Mui-checked': { color: '#2867D8' },
+          color: brand.borderStrong,
+          '&.Mui-checked': { color: brand.primary },
         },
       },
     },
     MuiLink: {
       styleOverrides: {
         root: {
-          color: '#2867D8',
+          color: brand.primary,
           textDecoration: 'none',
           fontWeight: 500,
           '&:hover': { textDecoration: 'underline' },
