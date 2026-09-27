@@ -36,7 +36,7 @@ git status
 | Prometheus | Вова | сбор и правила метрик | ещё не реализован |
 | Grafana | Вова | дашборды по метрикам, данным и логам | ещё не реализована |
 | Экспортёры PostgreSQL и cAdvisor | Вова | метрики БД и ресурсов контейнеров | ещё не реализованы |
-| `/common` | Вова | общий Python-модуль логов, request ID и HTTP-метрик | ещё не реализован |
+| `/common` | Вова | общий Python-модуль логов, request ID и HTTP-метрик | framework-agnostic логи/request ID реализованы в `common/`; HTTP-метрики и подключения приложений ещё не реализованы |
 | k6 | Вова | воспроизводимый нагрузочный тест | ещё не реализован |
 
 Целевой Compose включает frontend, Keycloak, backend, ETL, ML, PostgreSQL (сервисная и логическая база логов), Prometheus, Grafana, экспортеры и нагрузочный сервис по мере готовности компонентов. До добавления `docker-compose.yml` точный набор контейнеров и способ размещения двух баз PostgreSQL остаются не реализованными решениями. Общая договорённость допускает два PostgreSQL-контейнера или один контейнер с двумя базами.
@@ -96,7 +96,7 @@ flowchart LR
 | ETL → Service DB | `validations`, `schedule`, `telematics`, `ext_*`, `features_hourly`; обновление справочников | Марк + Вова | схема согласована на уровне таблиц; миграции и права ещё не реализованы |
 | ML ↔ Service DB | ML читает признаки; пишет `forecast_runs`, `forecasts`, `model_metrics` | Артур + Вова | схема/направление согласованы; миграции и учётная роль ещё не реализованы |
 | Backend → Service DB | прямое чтение готовых прогнозов — только если потребуется для горячего пути | Марк + Вова | опциональный путь; включать после измерения p95 и согласования прав `backend_ro` |
-| Backend/ETL/ML → Logs DB | JSON в stdout и асинхронные пачки через `/common`; `X-Request-ID` проходит по цепочке | владельцы сервисов + Вова | автономная Logs DB и retention-связь реализованы в `infra/db/logs/compose.yaml`; `/common` и интеграция в общий Compose ещё не реализованы |
+| Backend/ETL/ML → `/common` → Logs DB | UUID `X-Request-ID`, контрактный JSON в stdout и асинхронные INSERT-пачки; query string из `path` отбрасывается | владельцы сервисов + Вова | ядро `/common` и автономная Logs DB реализованы; middleware/адаптеры приложений и общий Compose ещё не подключены, см. [README `/common`](common/README.md) |
 | Prometheus → Backend/ETL/ML | scrape `GET /metrics` каждые 5–15 секунд; метрики отдаются сервисами в формате Prometheus | владельцы сервисов + Вова | требуется endpoint и targets Prometheus; конфиг ещё не создан |
 | Prometheus → PostgreSQL exporters | `postgres_exporter` собирает метрики сервисной и логической БД | Вова | ещё не реализовано; порт экспортера только внутри Compose-сети |
 | Prometheus → cAdvisor | scrape CPU, память, swap и состояние контейнеров | Вова | ещё не реализовано; наружу порт не публиковать |
@@ -195,7 +195,13 @@ flowchart LR
 | Maintenance → Logs DB | `LOGS_DB_HOST`, `LOGS_DB_PORT`, `LOGS_DB_NAME`, `LOGS_MAINTENANCE_USER`, `LOGS_MAINTENANCE_PASSWORD`, `LOGS_RETENTION_INTERVAL_SECONDS`; пароль только в локальном `.env`. Maintenance зависит от `logs-db` с `service_healthy`; порт не публикуется; DB healthcheck — `pg_isready`; cleanup healthcheck проверяет успешный heartbeat не старше двух интервалов + 60 секунд. Процесс завершается при ошибке и Compose перезапускает его (`unless-stopped`). | в тестовой среде запустить `infra/db/logs/retention.sh`; проверить удаление строки старше 7 суток и сохранение свежей |
 | Grafana → Logs DB | read-only LOGIN-член `grafana_ro`; host-порт БД не публикуется | запросить логи по service/level/request_id; INSERT/DELETE от этой учётки должны быть запрещены |
 
-Схема, роли, отдельный Compose, локальный env-шаблон, retention и runbook собраны как автономный блок без опубликованных портов. Интеграция `/common` и Grafana в общий Compose ждёт компоненты и настройки коллег. Порядок первого запуска, проверки, пересборки и восстановления описан в [runbook Logs DB](infra/db/logs/README.md).
+Схема, роли, отдельный Compose, локальный env-шаблон, retention и runbook собраны как автономный блок без опубликованных портов. Подключение `/common` и Grafana в общий Compose ждёт компоненты и настройки коллег. Порядок первого запуска, проверки, пересборки и восстановления описан в [runbook Logs DB](infra/db/logs/README.md).
+
+### 5.2. `/common`: Python-контракт логирования
+
+Реализация framework-agnostic ядра находится в [`common/`](common/README.md); в чужие Backend/ETL/ML каталоги оно не встроено. `LogEmitter` выдаёт ровно 12 полей из таблицы `public.logs`: JSON строка всегда пишется в stdout, DB writer через bounded queue делает пакетные INSERT в отдельном потоке. Недоступность Logs DB или переполнение очереди не блокируют обработчик и не убирают stdout-копию. DB-роль только `logs_writer` (INSERT); сетевой порт модуля HTTP отсутствует, PostgreSQL доступен приложению только в приватной Docker-сети на 5432.
+
+`request_context()` сохраняет валидный UUID `X-Request-ID` или создаёт новый; HTTP-адаптер владельца приложения должен вернуть UUID в response header и передавать его исходящим запросам. `/common` не разбирает JWT: проверенное приложением значение передаётся как `user_id`. Query string в `path` удаляется во избежание записи токенов. Для DB writer требуются `LOGS_DB_HOST`, `LOGS_DB_PORT`, `LOGS_DB_NAME`, `LOGS_WRITER_USER`, `LOGS_WRITER_PASSWORD`; последние два — секреты. При неясном результате commit ограниченный retry может привести к дубликату, потому что контракт `logs` не имеет idempotency key. Реальные DNS/build context и lifecycle hook остаются `TBD` до общего Compose и подтверждения владельцев. HTTP-метрики из раздела 8 ещё не реализованы.
 
 Гранулярность прогнозов: `day` — 24 часовые точки; `month` — одна точка на день; `year` — одна точка на месяц. Участок маршрута задаётся `(route_id, direction, from_stop_id, to_stop_id)` и агрегирует значения подряд идущих остановок. План быстрых агрегатов: `mv_forecast_route_hour`, `mv_forecast_stop_hour`, `mv_forecast_route_day`, `mv_forecast_route_month`, `mv_forecast_map_hour`. ETL обновляет их вызовом `refresh_forecast_views()` после пакетного расчёта; для `REFRESH MATERIALIZED VIEW CONCURRENTLY` нужны уникальные индексы. Запросы проверяются через `EXPLAIN ANALYZE`, целевое время для типовых запросов — менее 50 мс.
 
@@ -220,7 +226,7 @@ flowchart LR
 
 ## 7. Переменные окружения и секреты
 
-Файл `.env.example` пока отсутствует, поэтому конкретные имена переменных ещё не установлены. Когда Compose появится, здесь и в `.env.example` должна быть таблица вида:
+Корневой `.env.example` пока отсутствует; для самостоятельной Logs DB есть безопасный шаблон `infra/db/logs/.env.example`. Когда общий Compose появится, здесь и в корневом шаблоне должна быть таблица вида:
 
 | Группа | Использует | Назначение | Секрет? |
 | --- | --- | --- | --- |
@@ -228,6 +234,8 @@ flowchart LR
 | `GRAFANA_*` | Grafana | начальный администратор и OAuth при включении | пароли/client secret — да |
 | `*_HOST_PORT` | Compose | host-порты frontend, Keycloak, Grafana | нет |
 | `*_URL` | Backend, ETL, ML, Prometheus | адреса внутри Docker-сети | обычно нет |
+| `LOGS_DB_HOST`, `LOGS_DB_PORT`, `LOGS_DB_NAME` | Backend/ETL/ML `/common` writer | внутренний адрес Logs DB | нет |
+| `LOGS_WRITER_USER`, `LOGS_WRITER_PASSWORD` | Backend/ETL/ML `/common` writer | отдельная LOGIN-учётка с членством `logs_writer` | пароль — да |
 | внешние API keys | ETL | доступ к выбранным источникам | да |
 
 Реальные значения хранятся только в локальном `.env` или согласованном хранилище. `.env`, пароли, JWT, API-ключи, приватные ключи, сертификаты с закрытым ключом и данные учётных записей не коммитятся и не вставляются в README. Коммитится только безопасный `.env.example` с назначением и демонстрационными значениями.
@@ -249,10 +257,10 @@ flowchart LR
 
 ## 9. Каталоги нашей ответственности
 
-Планируемая структура; каталоги появятся вместе с первым содержимым:
+Структура нашей зоны; незаполненные каталоги создаются по мере готовности блоков:
 
 ```text
-common/                    общий Python-модуль JSON логов, request ID и метрик
+common/                    общий Python-модуль JSON логов, request ID и async DB writer; HTTP-метрики TBD
 infra/db/service/          SQL-миграции сервисной БД
 infra/db/logs/             схема и политика хранения логов
 infra/prometheus/          scrape targets, recording/alert rules
@@ -298,7 +306,7 @@ sudo docker compose logs --tail=200
 1. Сверить и зафиксировать с владельцами сервисов имена Compose-сервисов, Dockerfile, healthchecks, внутренние порты и переменные окружения.
 2. Создать согласованный Compose-скелет с healthchecks, внутренней сетью и лимитами, проверив свободные host-порты до публикации.
 3. Встроить проверенный автономный модуль Logs DB и retention в общий Compose; затем добавить корневой `.env.example` и миграции сервисной БД.
-4. Подключить `/common`, exporters, Prometheus scrape/rules и Grafana provisioning.
+4. Подключить `/common` адаптерами владельцев сервисов; отдельно реализовать HTTP-метрики, exporters, Prometheus scrape/rules и Grafana provisioning.
 5. Проверить запросы к API и БД по интеграционным контрактам из разделов 3–5.
 6. Провести k6-тест и внести фактические результаты, профиль стенда и ограничения в `docs/perf/` и README.
 

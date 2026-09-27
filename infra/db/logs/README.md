@@ -7,7 +7,7 @@
 | Часть / связь | Контракт, владелец и проверка |
 | --- | --- |
 | logs-db — Вова | PostgreSQL 16, внутренний адрес logs-db:5432; постоянный volume logs-db-data; readiness через pg_isready; host-порт не публикуется |
-| Backend, ETL, ML → /common → logs-db | Владельцы сервисов + Вова. /common передаёт JSON пачками и сохраняет X-Request-ID в request_id; writer-учётка может только INSERT; сбой БД не останавливает сервисы — fallback в stdout |
+| Backend, ETL, ML → /common → logs-db | Владельцы сервисов + Вова. [Контракт и инструкция `/common`](../../../common/README.md): JSON-пачки и X-Request-ID в request_id; writer-учётка имеет только INSERT; при сбое БД остаётся stdout fallback |
 | Grafana → logs-db | Вова; отдельная LOGIN-учётка — член grafana_ro, только SELECT; соединение внутри Docker-сети |
 | logs-retention → logs-db | Вова; стартует после service_healthy; отдельная LOGIN-учётка может выполнить только delete_expired_logs_batch(); раз в час удаляются записи старше 7 суток пачками до 10 000 |
 | Контракт logs | Ровно прикладные поля ts, service, level, request_id, user_id, event, message, method, path, status, latency_ms, payload; типы и nullable-поля описаны в корневом README, раздел 5.1 |
