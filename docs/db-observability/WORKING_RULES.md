@@ -178,21 +178,21 @@ cp .env.example .env
 Запуск и просмотр состояния:
 
 ```bash
-docker compose config
-docker compose up -d
-docker compose ps
+sudo docker compose config
+sudo docker compose up -d
+sudo docker compose ps
 ```
 
 Просмотр логов нашей инфраструктуры:
 
 ```bash
-docker compose logs --tail=200 db prometheus grafana
+sudo docker compose logs --tail=200 db prometheus grafana
 ```
 
 Остановка созданного этим проектом стека без удаления данных:
 
 ```bash
-docker compose down
+sudo docker compose down
 ```
 
 Удаление volumes, образов или данных — отдельное разрушительное действие и без явного разрешения не выполняется.
@@ -203,10 +203,28 @@ docker compose down
 git status
 git diff --check
 git diff
-docker compose config
+sudo docker compose config
 ```
 
 Конкретные команды миграций, проверок SQL, Prometheus, Grafana и k6 добавляются в README одновременно с появлением соответствующей реализации.
+
+### Установка Docker на этой ВМ
+
+На общей ВМ установлен Docker Engine 29.8.1, Docker Compose plugin 5.5.1 и Buildx 0.37.1 на Ubuntu 24.04 LTS x86_64. Установка выполнена из [официального apt-репозитория Docker для Ubuntu](https://docs.docker.com/engine/install/ubuntu/); системные пакеты и настройки репозитория относятся к общей ВМ, а не к Git-репозиторию.
+
+Перед установкой или изменением Docker на общей ВМ требуется согласие команды. Установка добавляет официальный apt-репозиторий Docker, ключ подписи пакетов и пакеты Engine, CLI, containerd, Buildx и Compose plugin. Служба включена для автоматического запуска и активна. Тест `sudo docker run --rm hello-world` завершился успешно.
+
+Проверка текущего состояния:
+
+```bash
+sudo docker --version
+sudo docker compose version
+sudo docker buildx version
+sudo systemctl is-active docker
+sudo docker run --rm hello-world
+```
+
+Пользователь не добавлен в группу `docker`; выполняйте команды через `sudo`. Не меняйте членство в этой группе без отдельного согласования: доступ к сокету Docker даёт широкие системные привилегии. До публикации портов сверяйте их с командой и заносите утверждённые значения в Compose и README. Публикуемые Docker-порты могут обходить правила UFW, поэтому сетевые изменения нужно оценивать отдельно.
 
 ## 11. Зависимости и интерфейсы команды
 
@@ -284,3 +302,11 @@ docker compose config
 - разрушительные или общесерверные действия не выполнялись без разрешения.
 
 После коммита push по-прежнему требует отдельного явного разрешения, кроме случая, когда такое разрешение уже дано для конкретного изменения в текущей задаче.
+
+## 14. Цельные блоки работы
+
+- Не передавать частичные правки как завершённый результат. Сначала собрать связанный и проверяемый блок целиком.
+- Каждый завершённый блок включает изменение README либо явное объяснение, почему README менять не требуется.
+- До коммита перечитать весь diff, выполнить `git diff --check` и доступные проверки, описать результат и ограничения.
+- Коммитить только после этой проверки и только файлы нашей зоны.
+- Push выполнять после отдельного явного разрешения на конкретную отправку и только в `origin/db-observability-vova`.
