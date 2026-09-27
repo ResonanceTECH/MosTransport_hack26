@@ -1,0 +1,73 @@
+name: mos-transport-logs
+
+services:
+  logs-db:
+    image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${LOGS_DB_NAME:?Set LOGS_DB_NAME in .env}
+      POSTGRES_USER: ${LOGS_ADMIN_USER:?Set LOGS_ADMIN_USER in .env}
+      POSTGRES_PASSWORD: ${LOGS_ADMIN_PASSWORD:?Set LOGS_ADMIN_PASSWORD in .env}
+      LOGS_WRITER_USER: ${LOGS_WRITER_USER:?Set LOGS_WRITER_USER in .env}
+      LOGS_WRITER_PASSWORD: ${LOGS_WRITER_PASSWORD:?Set LOGS_WRITER_PASSWORD in .env}
+      LOGS_GRAFANA_USER: ${LOGS_GRAFANA_USER:?Set LOGS_GRAFANA_USER in .env}
+      LOGS_GRAFANA_PASSWORD: ${LOGS_GRAFANA_PASSWORD:?Set LOGS_GRAFANA_PASSWORD in .env}
+      LOGS_MAINTENANCE_USER: ${LOGS_MAINTENANCE_USER:?Set LOGS_MAINTENANCE_USER in .env}
+      LOGS_MAINTENANCE_PASSWORD: ${LOGS_MAINTENANCE_PASSWORD:?Set LOGS_MAINTENANCE_PASSWORD in .env}
+    command: [postgres, -p, "8000", -c, shared_buffers=256MB, -c, work_mem=4MB, -c, effective_cache_size=768MB, -c, max_connections=40]
+    expose: ["8000"]
+    volumes:
+      - logs-db-data:/var/lib/postgresql/data
+      - ./001_logs_schema.sql:/docker-entrypoint-initdb.d/001_logs_schema.sql:ro
+      - ./002_create_login_roles.sh:/docker-entrypoint-initdb.d/002_create_login_roles.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -p 8000 -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    cpus: 1.0
+    mem_limit: 1g
+    memswap_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  logs-retention:
+    image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+    restart: unless-stopped
+    depends_on:
+      logs-db:
+        condition: service_healthy
+    environment:
+      LOGS_DB_HOST: logs-db
+      LOGS_DB_PORT: ${LOGS_DB_PORT:-8000}
+      LOGS_DB_NAME: ${LOGS_DB_NAME:?Set LOGS_DB_NAME in .env}
+      LOGS_MAINTENANCE_USER: ${LOGS_MAINTENANCE_USER:?Set LOGS_MAINTENANCE_USER in .env}
+      LOGS_MAINTENANCE_PASSWORD: ${LOGS_MAINTENANCE_PASSWORD:?Set LOGS_MAINTENANCE_PASSWORD in .env}
+      LOGS_RETENTION_INTERVAL_SECONDS: ${LOGS_RETENTION_INTERVAL_SECONDS:-3600}
+      LOGS_RETENTION_HEARTBEAT_FILE: /tmp/logs-retention-last-success
+    entrypoint: ["/bin/sh", "/opt/logs/retention.sh"]
+    volumes:
+      - ./retention.sh:/opt/logs/retention.sh:ro
+      - ./delete_expired_batch.sql:/opt/logs/delete_expired_batch.sql:ro
+      - ./retention_healthcheck.sh:/opt/logs/retention_healthcheck.sh:ro
+    healthcheck:
+      test: ["CMD", "/bin/sh", "/opt/logs/retention_healthcheck.sh"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    cpus: 0.1
+    mem_limit: 128m
+    memswap_limit: 128m
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+volumes:
+  logs-db-data:

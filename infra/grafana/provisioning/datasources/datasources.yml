@@ -1,0 +1,38 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:8010
+    isDefault: true
+    editable: true
+
+  - name: Logs DB
+    uid: logs-db
+    type: postgres
+    access: proxy
+    url: logs-db:8000
+    database: ${LOGS_DB_NAME}
+    user: ${LOGS_GRAFANA_USER}
+    secureJsonData:
+      password: ${LOGS_GRAFANA_PASSWORD}
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1600
+    editable: true
+
+  - name: Service DB
+    uid: service-db
+    type: postgres
+    access: proxy
+    url: service-db:1030
+    database: ${SERVICE_DB_NAME}
+    user: ${SERVICE_GRAFANA_USER}
+    secureJsonData:
+      password: ${SERVICE_GRAFANA_PASSWORD}
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1600
+    editable: true

@@ -1,0 +1,45 @@
+name: mos-transport-service-db
+services:
+  service-db:
+    image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${SERVICE_DB_NAME:?Set SERVICE_DB_NAME in .env}
+      POSTGRES_USER: ${SERVICE_DB_ADMIN_USER:?Set SERVICE_DB_ADMIN_USER in .env}
+      POSTGRES_PASSWORD: ${SERVICE_DB_ADMIN_PASSWORD:?Set SERVICE_DB_ADMIN_PASSWORD in .env}
+      SERVICE_DB_PORT: ${SERVICE_DB_PORT:-1030}
+    command:
+      - postgres
+      - -p
+      - "${SERVICE_DB_PORT:-1030}"
+      - -c
+      - "shared_buffers=${SERVICE_DB_SHARED_BUFFERS:-256MB}"
+      - -c
+      - "work_mem=${SERVICE_DB_WORK_MEM:-4MB}"
+      - -c
+      - "effective_cache_size=${SERVICE_DB_EFFECTIVE_CACHE_SIZE:-768MB}"
+      - -c
+      - "max_connections=${SERVICE_DB_MAX_CONNECTIONS:-40}"
+    expose: ["1030"]
+    volumes:
+      - service-db-data:/var/lib/postgresql/data
+      - ./001_service_schema.sql:/docker-entrypoint-initdb.d/001_service_schema.sql:ro
+      - ./002_grants.sql:/docker-entrypoint-initdb.d/002_grants.sql:ro
+      - ./003_views.sql:/docker-entrypoint-initdb.d/003_views.sql:ro
+      - ./004_functions.sql:/docker-entrypoint-initdb.d/004_functions.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -p "$${SERVICE_DB_PORT}" -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    mem_limit: 1g
+    memswap_limit: 1g
+    cpus: 1.0
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  service-db-data:
