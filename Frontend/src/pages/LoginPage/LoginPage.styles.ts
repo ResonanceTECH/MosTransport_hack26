@@ -79,12 +79,12 @@ export const heroContentSx: SxProps<Theme> = {
   flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  justifyContent: 'center',
+  justifyContent: 'flex-start',
   minHeight: 0,
   maxWidth: 650,
+  mt: 'clamp(28px, 5vh, 56px)',
   [shortHeight]: {
-    justifyContent: 'flex-start',
-    pt: 'clamp(16px, 4vh, 40px)',
+    mt: 'clamp(16px, 3vh, 28px)',
   },
 }
 
