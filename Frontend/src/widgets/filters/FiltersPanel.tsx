@@ -225,7 +225,14 @@ export function FiltersPanel({ variant = 'sidebar', onApply }: FiltersPanelProps
                 <Stack
                   direction="row"
                   spacing={0.5}
-                  sx={{ position: 'absolute', top: 0, left: 0, right: 0, px: 0.5 }}
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    px: 0.5,
+                    pointerEvents: 'none',
+                  }}
                 >
                   <Box sx={{ flex: 1 }} />
                   <Chip
