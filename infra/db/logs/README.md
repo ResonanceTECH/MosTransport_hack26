@@ -6,7 +6,7 @@
 
 | Часть / связь | Контракт, владелец и проверка |
 | --- | --- |
-| logs-db — Вова | PostgreSQL 16, внутренний адрес logs-db:5432; постоянный volume logs-db-data; readiness через pg_isready; host-порт не публикуется |
+| logs-db — Вова | PostgreSQL 16, внутренний адрес logs-db:8000; постоянный volume logs-db-data; readiness через pg_isready -p 8000; host-порт не публикуется |
 | Backend, ETL, ML → /common → logs-db | Владельцы сервисов + Вова. [Контракт и инструкция `/common`](../../../common/README.md): JSON-пачки и X-Request-ID в request_id; writer-учётка имеет только INSERT; при сбое БД остаётся stdout fallback |
 | Grafana → logs-db | Вова; отдельная LOGIN-учётка — член grafana_ro, только SELECT; соединение внутри Docker-сети |
 | logs-retention → logs-db | Вова; стартует после service_healthy; отдельная LOGIN-учётка может выполнить только delete_expired_logs_batch(); раз в час удаляются записи старше 7 суток пачками до 10 000 |
@@ -41,7 +41,7 @@ sudo docker compose --env-file .env -f compose.yaml ps
 sudo docker compose --env-file .env -f compose.yaml logs --tail=100 logs-db logs-retention
 ~~~
 
-Оба сервиса должны быть healthy. Автоматическая SQL-инициализация и bootstrap LOGIN-учёток выполняются только при первом создании пустого volume. На ВМ открыт только внутренний порт 5432 в частной Docker-сети; ни один порт не публикуется наружу.
+Оба сервиса должны быть healthy. Автоматическая SQL-инициализация и bootstrap LOGIN-учёток выполняются только при первом создании пустого volume. На ВМ открыт только внутренний порт 8000 в частной Docker-сети; ни один порт не публикуется наружу.
 
 ## Проверки и диагностика
 
@@ -66,7 +66,7 @@ Writer может вставлять, но не читать/обновлять/
 | logs-db не healthy | compose ps и logs logs-db; корректность .env; свободное место; pg_isready |
 | отсутствует таблица/роль | логи первого запуска: init-скрипты исполняются только на пустом volume; старый volume требует ручного применения миграции |
 | writer получает permission denied | имя LOGIN-учётки и членство в logs_writer; не выдавать приложению административную учётку |
-| Grafana не видит логи | адрес logs-db:5432, имя БД, членство в grafana_ro, фильтр времени и request_id |
+| Grafana не видит логи | адрес logs-db:8000, имя БД, членство в grafana_ro, фильтр времени и request_id |
 | retention не чистит | состояние/logs retention logs, последний успешный heartbeat, interval и членство maintenance LOGIN в logs_maintenance |
 | растёт диск | объём logs-db-data, временные границы записей, логи очистителя и состояние autovacuum |
 
