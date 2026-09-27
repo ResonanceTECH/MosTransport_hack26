@@ -43,7 +43,7 @@ export function ExportsPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxWidth: 800, p: { xs: 1.5, md: 2 } }}>
       <PageHeader
-        title="Выгрузки"
+        title="Экспорт"
         subtitle="Скачать прогноз в CSV или XLSX по текущим параметрам"
       />
 

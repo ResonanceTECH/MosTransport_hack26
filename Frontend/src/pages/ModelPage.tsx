@@ -31,7 +31,7 @@ export function ModelPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxWidth: 960, p: { xs: 1.5, md: 2 } }}>
       <PageHeader
-        title="О модели"
+        title="Модель"
         subtitle="Версия, качество, область применимости и внешние источники"
       />
       <Box id="docs" />

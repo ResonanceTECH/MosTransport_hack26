@@ -8,7 +8,7 @@ export function CoefficientsPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxWidth: 960, p: { xs: 1.5, md: 2 } }}>
       <PageHeader
-        title="Корректирующие коэффициенты"
+        title="Сценарии"
         subtitle="Сценарии внешних факторов с live-пересчётом прогноза"
       />
 

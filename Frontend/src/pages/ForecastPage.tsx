@@ -82,7 +82,7 @@ export function ForecastPage() {
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 0 }}>
         <PageHeader
-          title="Детальный прогноз"
+          title="Аналитика"
           subtitle="Графики, тепловая карта и сводка по выбранным параметрам"
         />
 
