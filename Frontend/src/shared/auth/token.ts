@@ -27,7 +27,7 @@ const DEMO_USERS: Record<string, { password: string; user: AppUser }> = {
     password: 'admin',
     user: {
       username: 'demo_admin',
-      name: 'Администратор (демо)',
+      name: 'Администратор',
       roles: ['dispatcher', 'admin'],
     },
   },
@@ -51,7 +51,19 @@ export function getDemoUser(): AppUser | null {
   const raw = localStorage.getItem(DEMO_USER_KEY)
   if (!raw) return null
   try {
-    return JSON.parse(raw) as AppUser
+    const stored = JSON.parse(raw) as AppUser
+    const canonical = DEMO_USERS[stored.username]?.user
+    if (canonical) {
+      // Keep display name / roles in sync with DEMO_USERS (stale localStorage after code changes)
+      if (
+        stored.name !== canonical.name ||
+        JSON.stringify(stored.roles) !== JSON.stringify(canonical.roles)
+      ) {
+        localStorage.setItem(DEMO_USER_KEY, JSON.stringify(canonical))
+      }
+      return canonical
+    }
+    return stored
   } catch {
     return null
   }

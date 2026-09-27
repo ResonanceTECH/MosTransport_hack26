@@ -1,7 +1,8 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { CircularProgress, Box } from '@mui/material'
 import { useAuth } from '@/shared/auth/AuthProvider'
-import type { AppRole } from '@/shared/auth/token'
+
+export { RoleGuard } from '@/shared/guards/RoleGuard'
 
 export function ProtectedRoute() {
   const { ready, isAuthenticated } = useAuth()
@@ -19,19 +20,5 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace state={{ from: location }} />
   }
 
-  return <Outlet />
-}
-
-export function RoleGuard({ roles }: { roles: AppRole[] }) {
-  const { hasRole } = useAuth()
-  if (!roles.some((role) => hasRole(role))) {
-    return (
-      <Navigate
-        to="/forbidden"
-        replace
-        state={{ requiredRole: roles.includes('admin') ? 'admin' : roles[0] }}
-      />
-    )
-  }
   return <Outlet />
 }
