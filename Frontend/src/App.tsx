@@ -2,7 +2,8 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CssBaseline } from '@mui/material'
 import { AuthProvider } from '@/shared/auth/AuthProvider'
-import { ProtectedRoute, RoleGuard } from '@/shared/auth/ProtectedRoute'
+import { ProtectedRoute } from '@/shared/auth/ProtectedRoute'
+import { RoleGuard } from '@/shared/guards/RoleGuard'
 import { ColorModeProvider } from '@/shared/theme/ColorModeProvider'
 import { LoginPage } from '@/pages/LoginPage'
 import { AuthCallbackPage } from '@/pages/AuthCallbackPage'
@@ -12,6 +13,7 @@ import { ForecastPage } from '@/pages/ForecastPage'
 import { CoefficientsPage } from '@/pages/CoefficientsPage'
 import { ExportsPage } from '@/pages/ExportsPage'
 import { ModelPage } from '@/pages/ModelPage'
+import { AdminSystemPage } from '@/pages/AdminSystemPage/AdminSystemPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
 import { AppLayout } from '@/widgets/layout/AppLayout'
@@ -53,6 +55,12 @@ export default function App() {
                       <Route path="/coefficients" element={<CoefficientsPage />} />
                       <Route path="/exports" element={<ExportsPage />} />
                       <Route path="/model" element={<ModelPage />} />
+                    </Route>
+                  </Route>
+
+                  <Route element={<RoleGuard roles={['admin']} />}>
+                    <Route element={<AppLayout />}>
+                      <Route path="/admin/system" element={<AdminSystemPage />} />
                     </Route>
                   </Route>
                 </Route>
