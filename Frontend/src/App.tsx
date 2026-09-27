@@ -1,9 +1,9 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { CssBaseline, ThemeProvider } from '@mui/material'
+import { CssBaseline } from '@mui/material'
 import { AuthProvider } from '@/shared/auth/AuthProvider'
 import { ProtectedRoute, RoleGuard } from '@/shared/auth/ProtectedRoute'
-import { theme } from '@/shared/theme/theme'
+import { ColorModeProvider } from '@/shared/theme/ColorModeProvider'
 import { LoginPage } from '@/pages/LoginPage'
 import { AuthCallbackPage } from '@/pages/AuthCallbackPage'
 import { ForbiddenPage } from '@/pages/ForbiddenPage'
@@ -33,7 +33,7 @@ const queryClient = new QueryClient({
 
 export default function App() {
   return (
-    <ThemeProvider theme={theme}>
+    <ColorModeProvider>
       <CssBaseline />
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
@@ -65,6 +65,6 @@ export default function App() {
           </BrowserRouter>
         </AuthProvider>
       </QueryClientProvider>
-    </ThemeProvider>
+    </ColorModeProvider>
   )
 }
