@@ -442,6 +442,13 @@ export const handlers: HttpHandler[] = [
   http.post(`${API}/forecast/recompute`, ({ request }) => {
     const denied = requireAuth(request)
     if (denied) return denied
+    const token = request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '').trim() ?? ''
+    // demo.<username>.<ts> — admin role required (mirrors backend RBAC)
+    const username = token.startsWith('demo.') ? token.split('.')[1] : ''
+    if (username !== 'demo_admin') {
+      const id = requestId(request)
+      return apiError('Forbidden', id, 403, 'forbidden')
+    }
     return HttpResponse.json(
       { job_id: crypto.randomUUID(), status: 'accepted' },
       { status: 202, headers: { 'X-Request-ID': requestId(request) } },
