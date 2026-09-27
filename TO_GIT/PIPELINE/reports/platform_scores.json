@@ -1,0 +1,12 @@
+{
+  "metric": "WAPE-score on the hidden Nov-Dec 2025 ground truth (competition platform)",
+  "recorded_at": "2026-09-27T22:31:00+03:00",
+  "scores": {
+    "submission.csv (pytorch)": 0.87022,
+    "pytorch": 0.87022,
+    "lightgbm": 0.88226,
+    "ensemble": 0.88265
+  },
+  "best": "ensemble",
+  "note": "Local holdout (Sep-Oct) ranked pytorch first; the platform (Nov-Dec) ranks ensemble and lightgbm first. Sep-Oct contains the back-to-school jump, Nov-Dec does not, so the conservative profile-close LightGBM generalizes better there."
+}

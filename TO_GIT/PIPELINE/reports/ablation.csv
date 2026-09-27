@@ -1,0 +1,7 @@
+variant,wape_score,gain_vs_profiles_only
+profiles only,0.762,0.0
++ calendar,0.7618,-0.0002
++ weather,0.7741,0.0121
++ traffic,0.7619,-0.0001
+calendar + weather,0.774,0.012
+all sources,0.7738,0.0118

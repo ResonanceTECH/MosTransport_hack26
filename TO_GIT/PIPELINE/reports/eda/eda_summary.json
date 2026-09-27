@@ -1,0 +1,65 @@
+{
+  "rows_total": 87600,
+  "rows_with_target": 72960,
+  "rows_forecast": 14640,
+  "boardings_total": 59667191,
+  "zero_hours_share": 0.2112,
+  "hours_without_service_0_4_share": 0.7072,
+  "routes_without_boardings": [
+    5
+  ],
+  "boardings_by_route": {
+    "1": 5122040,
+    "5": 0,
+    "7": 6493684,
+    "11": 8942462,
+    "12": 9339231,
+    "17": 14099382,
+    "25": 1988187,
+    "26": 4879661,
+    "28": 2775255,
+    "50": 6027289
+  },
+  "mean_daily_city_by_month": {
+    "1": 179591,
+    "2": 211956,
+    "3": 216731,
+    "4": 213946,
+    "5": 193578,
+    "6": 185166,
+    "7": 174441,
+    "8": 171290,
+    "9": 204923,
+    "10": 213122
+  },
+  "mean_daily_city_by_day_type": {
+    "saturday": 136932,
+    "sunday": 115843,
+    "workday": 230339
+  },
+  "holiday_vs_workday_ratio": 0.477,
+  "workday_spearman_with_daily_boardings": {
+    "temperature_c": -0.532,
+    "precipitation_mm": -0.244,
+    "snowfall_cm": 0.148
+  },
+  "missing_share_in_features": {
+    "is_dayoff": 0.0,
+    "is_short_day": 0.0,
+    "is_holiday": 0.0,
+    "is_transfer_workday": 0.0,
+    "is_saturday_profile": 0.0,
+    "is_sunday_profile": 0.0,
+    "temperature_c": 0.0,
+    "precipitation_mm": 0.0,
+    "snowfall_cm": 0.0,
+    "wind_speed_ms": 0.0,
+    "humidity_pct": 0.0,
+    "cloud_cover_pct": 0.0,
+    "is_rain": 0.0,
+    "is_snow": 0.0,
+    "traffic_congestion_index": 0.0,
+    "traffic_duration_s": 0.0
+  },
+  "peak_hour_workday": 8
+}

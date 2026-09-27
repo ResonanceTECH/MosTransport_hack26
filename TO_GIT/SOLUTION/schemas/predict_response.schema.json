@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict_response.schema.json",
+  "$defs": {
+    "Prediction": {
+      "properties": {
+        "route_id": {
+          "title": "Route Id",
+          "type": "integer"
+        },
+        "date": {
+          "format": "date",
+          "title": "Date",
+          "type": "string"
+        },
+        "hour": {
+          "title": "Hour",
+          "type": "integer"
+        },
+        "prediction": {
+          "description": "Forecast boardings for the hour",
+          "minimum": 0,
+          "title": "Prediction",
+          "type": "number"
+        }
+      },
+      "required": [
+        "route_id",
+        "date",
+        "hour",
+        "prediction"
+      ],
+      "title": "Prediction",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "model": {
+      "title": "Model",
+      "type": "string"
+    },
+    "origin": {
+      "format": "date",
+      "title": "Origin",
+      "type": "string"
+    },
+    "horizon_days": {
+      "description": "Number of forecast dates",
+      "title": "Horizon Days",
+      "type": "integer"
+    },
+    "rows": {
+      "title": "Rows",
+      "type": "integer"
+    },
+    "total_prediction": {
+      "title": "Total Prediction",
+      "type": "number"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    },
+    "predictions": {
+      "items": {
+        "$ref": "#/$defs/Prediction"
+      },
+      "title": "Predictions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "model",
+    "origin",
+    "horizon_days",
+    "rows",
+    "total_prediction",
+    "predictions"
+  ],
+  "title": "PredictResponse",
+  "type": "object"
+}

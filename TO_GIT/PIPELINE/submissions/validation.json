@@ -1,0 +1,93 @@
+{
+  "baseline": {
+    "file": "/Users/arturartikov/Documents/MOSCOW_TRANSPORT_HACK/ML/submissions/submission_baseline.csv",
+    "rows": 14640,
+    "total_prediction": 12441034,
+    "mean_daily_per_route": {
+      "1": 18154,
+      "5": 0,
+      "7": 21342,
+      "11": 29727,
+      "12": 31472,
+      "17": 49993,
+      "25": 7919,
+      "26": 17424,
+      "28": 10085,
+      "50": 17836
+    },
+    "valid": true
+  },
+  "lightgbm": {
+    "file": "/Users/arturartikov/Documents/MOSCOW_TRANSPORT_HACK/ML/submissions/submission_lightgbm.csv",
+    "rows": 14640,
+    "total_prediction": 12577634,
+    "mean_daily_per_route": {
+      "1": 18435,
+      "5": 0,
+      "7": 21676,
+      "11": 30094,
+      "12": 31957,
+      "17": 49540,
+      "25": 8171,
+      "26": 17782,
+      "28": 10397,
+      "50": 18138
+    },
+    "valid": true
+  },
+  "pytorch": {
+    "file": "/Users/arturartikov/Documents/MOSCOW_TRANSPORT_HACK/ML/submissions/submission_pytorch.csv",
+    "rows": 14640,
+    "total_prediction": 12289614,
+    "mean_daily_per_route": {
+      "1": 18009,
+      "5": 0,
+      "7": 21724,
+      "11": 29659,
+      "12": 31240,
+      "17": 47754,
+      "25": 7551,
+      "26": 17438,
+      "28": 9738,
+      "50": 18358
+    },
+    "valid": true
+  },
+  "ensemble": {
+    "file": "/Users/arturartikov/Documents/MOSCOW_TRANSPORT_HACK/ML/submissions/submission_ensemble.csv",
+    "rows": 14640,
+    "total_prediction": 12548858,
+    "mean_daily_per_route": {
+      "1": 18393,
+      "5": 0,
+      "7": 21681,
+      "11": 30051,
+      "12": 31886,
+      "17": 49362,
+      "25": 8109,
+      "26": 17748,
+      "28": 10331,
+      "50": 18159
+    },
+    "valid": true
+  },
+  "submission.csv": {
+    "file": "/Users/arturartikov/Documents/MOSCOW_TRANSPORT_HACK/ML/submissions/submission.csv",
+    "rows": 14640,
+    "total_prediction": 12289614,
+    "mean_daily_per_route": {
+      "1": 18009,
+      "5": 0,
+      "7": 21724,
+      "11": 29659,
+      "12": 31240,
+      "17": 47754,
+      "25": 7551,
+      "26": 17438,
+      "28": 9738,
+      "50": 18358
+    },
+    "valid": true,
+    "model": "pytorch"
+  }
+}

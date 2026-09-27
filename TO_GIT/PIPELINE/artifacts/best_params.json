@@ -1,0 +1,34 @@
+{
+  "tuning_origins": [
+    "2025-06-01",
+    "2025-07-01"
+  ],
+  "lightgbm": {
+    "params": {
+      "learning_rate": 0.02343638084696869,
+      "num_leaves": 25,
+      "min_data_in_leaf": 11,
+      "feature_fraction": 0.6626651653816322,
+      "bagging_fraction": 0.6943386448447411,
+      "lambda_l2": 0.016400705022266843,
+      "objective": "l1"
+    },
+    "num_boost_round": 63,
+    "tuning_wape": 0.18305363700236543
+  },
+  "pytorch": {
+    "params": {
+      "hidden": [
+        512,
+        256,
+        128
+      ],
+      "dropout": 0.16401308380298388,
+      "lr": 0.000765287218275009,
+      "weight_decay": 0.00755681014127443,
+      "epochs": 35,
+      "batch_size": 512
+    },
+    "tuning_wape": 0.19713906731831915
+  }
+}

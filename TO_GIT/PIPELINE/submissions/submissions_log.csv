@@ -1,0 +1,5 @@
+file,model,trained_at,local_holdout_wape_score_sep_oct,local_mean_4_windows,platform_wape_score_nov_dec
+submission.csv,pytorch,2026-09-27 22:20,0.8234,0.8182,0.87022
+submission_pytorch.csv,pytorch,2026-09-27 22:20,0.8234,0.8182,0.87022
+submission_lightgbm.csv,lightgbm,2026-09-27 22:20,0.7738,0.7959,0.88226
+submission_ensemble.csv,ensemble (0.9 lightgbm + 0.1 pytorch),2026-09-27 22:20,0.7800,0.8004,0.88265

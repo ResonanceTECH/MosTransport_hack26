@@ -1,0 +1,292 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "predict_request.schema.json",
+  "$defs": {
+    "FeatureRow": {
+      "properties": {
+        "route_id": {
+          "description": "Tram route, one of [1, 5, 7, 11, 12, 17, 25, 26, 28, 50]",
+          "title": "Route Id",
+          "type": "integer"
+        },
+        "date": {
+          "format": "date",
+          "title": "Date",
+          "type": "string"
+        },
+        "hour": {
+          "maximum": 23,
+          "minimum": 0,
+          "title": "Hour",
+          "type": "integer"
+        },
+        "boardings": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Actual boardings; null for the hours to forecast",
+          "title": "Boardings"
+        },
+        "day_type": {
+          "description": "Production calendar day profile",
+          "enum": [
+            "workday",
+            "saturday",
+            "sunday"
+          ],
+          "title": "Day Type",
+          "type": "string"
+        },
+        "is_dayoff": {
+          "title": "Is Dayoff",
+          "type": "boolean"
+        },
+        "is_short_day": {
+          "title": "Is Short Day",
+          "type": "boolean"
+        },
+        "is_holiday": {
+          "title": "Is Holiday",
+          "type": "boolean"
+        },
+        "is_transfer_workday": {
+          "title": "Is Transfer Workday",
+          "type": "boolean"
+        },
+        "temperature_c": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temperature C"
+        },
+        "precipitation_mm": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Precipitation Mm"
+        },
+        "snowfall_cm": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snowfall Cm"
+        },
+        "precip_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "none",
+                "rain",
+                "snow",
+                "sleet",
+                "hail"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Precip Type"
+        },
+        "wind_speed_ms": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wind Speed Ms"
+        },
+        "humidity_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Humidity Pct"
+        },
+        "cloud_cover_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cloud Cover Pct"
+        },
+        "traffic_congestion_index": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "2GIS travel time / free-flow time along the route",
+          "title": "Traffic Congestion Index"
+        },
+        "traffic_duration_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Traffic Duration S"
+        }
+      },
+      "required": [
+        "route_id",
+        "date",
+        "hour",
+        "day_type",
+        "is_dayoff",
+        "is_short_day",
+        "is_holiday",
+        "is_transfer_workday"
+      ],
+      "title": "FeatureRow",
+      "type": "object"
+    }
+  },
+  "examples": [
+    {
+      "model": "ensemble",
+      "origin": "2025-11-01",
+      "rows": [
+        {
+          "boardings": 5231,
+          "cloud_cover_pct": 100,
+          "date": "2025-10-31",
+          "day_type": "workday",
+          "hour": 8,
+          "humidity_pct": 88,
+          "is_dayoff": false,
+          "is_holiday": false,
+          "is_short_day": false,
+          "is_transfer_workday": false,
+          "precip_type": "none",
+          "precipitation_mm": 0.0,
+          "route_id": 17,
+          "snowfall_cm": 0.0,
+          "temperature_c": 3.1,
+          "traffic_congestion_index": 1.26,
+          "traffic_duration_s": 1800,
+          "wind_speed_ms": 2.4
+        },
+        {
+          "boardings": null,
+          "cloud_cover_pct": 100,
+          "date": "2025-11-05",
+          "day_type": "workday",
+          "hour": 8,
+          "humidity_pct": 91,
+          "is_dayoff": false,
+          "is_holiday": false,
+          "is_short_day": false,
+          "is_transfer_workday": false,
+          "precip_type": "snow",
+          "precipitation_mm": 0.2,
+          "route_id": 17,
+          "snowfall_cm": 0.1,
+          "temperature_c": 1.5,
+          "traffic_congestion_index": 1.26,
+          "traffic_duration_s": 1800,
+          "wind_speed_ms": 3.0
+        }
+      ]
+    }
+  ],
+  "properties": {
+    "model": {
+      "anyOf": [
+        {
+          "enum": [
+            "ensemble",
+            "lightgbm",
+            "pytorch",
+            "baseline"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Model; default is the best one on the competition platform (ensemble)",
+      "title": "Model"
+    },
+    "origin": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "First forecast date. Default: the earliest date that has rows with boardings = null",
+      "title": "Origin"
+    },
+    "rows": {
+      "description": "History with known boardings (56 days before origin are used) + rows to forecast (boardings = null)",
+      "items": {
+        "$ref": "#/$defs/FeatureRow"
+      },
+      "maxItems": 200000,
+      "minItems": 1,
+      "title": "Rows",
+      "type": "array"
+    }
+  },
+  "required": [
+    "rows"
+  ],
+  "title": "PredictRequest",
+  "type": "object"
+}

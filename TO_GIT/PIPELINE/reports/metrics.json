@@ -1,0 +1,81 @@
+{
+  "comparison": [
+    {
+      "model": "baseline",
+      "2025-06-01": 0.8018,
+      "2025-07-01": 0.812,
+      "2025-08-01": 0.803,
+      "2025-09-01": 0.7901,
+      "mean_tuning": 0.8069,
+      "mean_all": 0.8017
+    },
+    {
+      "model": "lightgbm",
+      "2025-06-01": 0.7938,
+      "2025-07-01": 0.8347,
+      "2025-08-01": 0.7813,
+      "2025-09-01": 0.7738,
+      "mean_tuning": 0.8142,
+      "mean_all": 0.7959
+    },
+    {
+      "model": "pytorch",
+      "2025-06-01": 0.7855,
+      "2025-07-01": 0.8202,
+      "2025-08-01": 0.8436,
+      "2025-09-01": 0.8234,
+      "mean_tuning": 0.8029,
+      "mean_all": 0.8182
+    },
+    {
+      "model": "ensemble",
+      "2025-06-01": 0.7941,
+      "2025-07-01": 0.835,
+      "2025-08-01": 0.7923,
+      "2025-09-01": 0.78,
+      "mean_tuning": 0.8146,
+      "mean_all": 0.8004
+    }
+  ],
+  "holdout_origin": "2025-09-01",
+  "holdout_wape_score": {
+    "baseline": 0.7901,
+    "lightgbm": 0.7738,
+    "pytorch": 0.8234,
+    "ensemble": 0.78
+  },
+  "ensemble_weight_lightgbm": 0.9,
+  "ablation_holdout": [
+    {
+      "variant": "profiles only",
+      "wape_score": 0.762,
+      "gain_vs_profiles_only": 0.0
+    },
+    {
+      "variant": "+ calendar",
+      "wape_score": 0.7618,
+      "gain_vs_profiles_only": -0.0002
+    },
+    {
+      "variant": "+ weather",
+      "wape_score": 0.7741,
+      "gain_vs_profiles_only": 0.0121
+    },
+    {
+      "variant": "+ traffic",
+      "wape_score": 0.7619,
+      "gain_vs_profiles_only": -0.0001
+    },
+    {
+      "variant": "calendar + weather",
+      "wape_score": 0.774,
+      "gain_vs_profiles_only": 0.012
+    },
+    {
+      "variant": "all sources",
+      "wape_score": 0.7738,
+      "gain_vs_profiles_only": 0.0118
+    }
+  ],
+  "best_model": "pytorch"
+}

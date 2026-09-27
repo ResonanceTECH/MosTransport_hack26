@@ -1,0 +1,86 @@
+{
+  "lightgbm_top": [
+    {
+      "feature": "temperature_c",
+      "mean_abs_shap": 26.70695791697061
+    },
+    {
+      "feature": "level_28",
+      "mean_abs_shap": 19.073102878313343
+    },
+    {
+      "feature": "hour",
+      "mean_abs_shap": 5.91403632784889
+    },
+    {
+      "feature": "wind_speed_ms",
+      "mean_abs_shap": 5.107821687690003
+    },
+    {
+      "feature": "route_id",
+      "mean_abs_shap": 4.88216167296526
+    },
+    {
+      "feature": "precipitation_mm",
+      "mean_abs_shap": 4.435774094101679
+    },
+    {
+      "feature": "day_of_week",
+      "mean_abs_shap": 4.151625784642629
+    },
+    {
+      "feature": "is_rain",
+      "mean_abs_shap": 2.918633394433658
+    },
+    {
+      "feature": "is_dayoff",
+      "mean_abs_shap": 2.3336766432773834
+    },
+    {
+      "feature": "level_7",
+      "mean_abs_shap": 1.688021211546776
+    }
+  ],
+  "pytorch_top": [
+    {
+      "feature": "p_daytype_28",
+      "mean_abs_shap": 290.5060596517154
+    },
+    {
+      "feature": "route_id",
+      "mean_abs_shap": 234.69143199116522
+    },
+    {
+      "feature": "hour",
+      "mean_abs_shap": 177.28419401217423
+    },
+    {
+      "feature": "temperature_c",
+      "mean_abs_shap": 65.79338493694233
+    },
+    {
+      "feature": "level_28",
+      "mean_abs_shap": 61.16544382353588
+    },
+    {
+      "feature": "traffic_congestion_index",
+      "mean_abs_shap": 46.174110671733025
+    },
+    {
+      "feature": "is_dayoff",
+      "mean_abs_shap": 42.64921094472832
+    },
+    {
+      "feature": "humidity_pct",
+      "mean_abs_shap": 35.164009912237944
+    },
+    {
+      "feature": "is_sunday_profile",
+      "mean_abs_shap": 31.98100752185534
+    },
+    {
+      "feature": "p_daytype_56",
+      "mean_abs_shap": 31.032538600698107
+    }
+  ]
+}
