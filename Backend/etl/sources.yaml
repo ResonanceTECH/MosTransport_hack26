@@ -1,0 +1,39 @@
+# External data sources for ETL
+# This file is the basis for the README section with links
+
+sources:
+  - id: calendar
+    name: "Производственный календарь"
+    description: "Выходные, праздники, переносы, сокращённые дни"
+    url: "https://github.com/isdayoff/calendars"
+    method: "git-clone"
+    env_var: null
+    period: "2026-2027"
+    refresh_interval: "yearly"
+
+  - id: weather
+    name: "Яндекс Погода"
+    description: "Температура, осадки, снег, ветер по часам"
+    url: "https://yandex.ru/dev/weather/doc/ru/"
+    method: "api"
+    env_var: "YANDEX_WEATHER_API_KEY"
+    period: "current + forecast"
+    refresh_interval: "hourly"
+
+  - id: traffic
+    name: "Яндекс Карты (пробки)"
+    description: "Загруженность улиц по часам"
+    url: "https://yandex.ru/dev/maps/"
+    method: "api"
+    env_var: "YANDEX_MAPS_API_KEY"
+    period: "current"
+    refresh_interval: "hourly"
+
+  - id: mosru
+    name: "Портал открытых данных Москвы"
+    description: "Справочник остановок и маршрутов; перекрытия, ремонты, мероприятия"
+    url: "https://data.mos.ru/developers"
+    method: "api"
+    env_var: "MOSRU_API_KEY"
+    period: "current"
+    refresh_interval: "daily"
