@@ -1,0 +1,153 @@
+version: "3.9"
+
+services:
+  # Frontend (Dasha)
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  # Keycloak (Dasha)
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: dev-file
+    volumes:
+      - ./auth/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+
+  # Backend API (Mark)
+  backend:
+    build: ./backend
+    ports:
+      - "8001:8000"
+    environment:
+      BACKEND_ETL_SERVICE_URL: http://etl:8000
+      BACKEND_ML_SERVICE_URL: http://ml:8000
+      BACKEND_KEYCLOAK_URL: http://keycloak:8080
+      BACKEND_KEYCLOAK_REALM: transport
+      BACKEND_LOG_LEVEL: INFO
+      BACKEND_WORKERS: 2
+    depends_on:
+      - etl
+      - keycloak
+    networks:
+      - app-network
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          memory: 1G
+
+  # ETL Service (Mark)
+  etl:
+    build: ./etl
+    environment:
+      ETL_DATABASE_URL: postgresql://etl:etl@db:5432/transport
+      ETL_YANDEX_WEATHER_API_KEY: ${YANDEX_WEATHER_API_KEY}
+      ETL_YANDEX_MAPS_API_KEY: ${YANDEX_MAPS_API_KEY}
+      ETL_MOSRU_API_KEY: ${MOSRU_API_KEY}
+      ETL_DATASET_PATH: /app/data/dataset.zip
+      ETL_LOG_LEVEL: INFO
+    volumes:
+      - ./dataset.zip:/app/data/dataset.zip:ro
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  # ML Service (Arthur)
+  ml:
+    build: ./ml
+    environment:
+      ML_DATABASE_URL: postgresql://ml:ml@db:5432/transport
+      ML_LOG_LEVEL: INFO
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  # PostgreSQL Database (Vova)
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: transport
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./infra/db/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+
+  # Logs Database (Vova)
+  logs-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: logs
+    volumes:
+      - logs-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # Prometheus (Vova)
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    volumes:
+      - ./infra/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - app-network
+
+  # Grafana (Vova)
+  grafana:
+    image: grafana/grafana:11.3.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+
+  # cAdvisor (Vova)
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.50.0
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - app-network
+
+volumes:
+  db-data:
+  logs-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  app-network:
+    driver: bridge
