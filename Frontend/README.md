@@ -59,7 +59,8 @@ VITE_API_PROXY=http://localhost:8000
 | Сборка | Vite 8, TypeScript 5.8 |
 | Прод | multi-stage Docker → nginx:alpine |
 
-Дизайн-токены и UI-kit: [`UI_KIT.md`](./UI_KIT.md).
+Дизайн-токены и UI-kit: [`UI_KIT.md`](./UI_KIT.md).  
+Тестирование (5 основных типов, MSW): [`test.md`](./test.md) — `npm run test` / `npm run test:e2e`.
 
 ---
 
