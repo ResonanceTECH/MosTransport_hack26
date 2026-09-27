@@ -1,29 +1,17 @@
 version: "3.9"
 
 services:
+  # Frontend (Dasha)
   frontend:
-    build:
-      context: ./Frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_USE_MSW: "true"
-        VITE_DEMO_AUTH: "true"
+    build: ./frontend
     ports:
-      - "8080:80"
-    environment:
-      API_BASE_URL: /api/v1
-      KEYCLOAK_URL: ""
-      KEYCLOAK_REALM: transport
-      KEYCLOAK_CLIENT_ID: web
-      USE_MSW: "true"
-      DEMO_AUTH: "true"
-      GRAFANA_URL: http://localhost:3000
-      MAP_STYLE_URL: https://basemaps.cartocdn.com/gl/positron-gl-style/style.json
+      - "80:80"
     depends_on:
       - backend
     networks:
       - app-network
 
+  # Keycloak (Dasha)
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     command: start-dev --import-realm
@@ -34,12 +22,13 @@ services:
     volumes:
       - ./auth/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
     ports:
-      - "8081:8080"
+      - "8080:8080"
     networks:
       - app-network
 
+  # Backend API (Mark)
   backend:
-    build: ./Backend
+    build: ./backend
     ports:
       - "8001:8000"
     environment:
@@ -62,6 +51,7 @@ services:
         reservations:
           memory: 1G
 
+  # ETL Service (Mark)
   etl:
     build: ./etl
     environment:
@@ -78,6 +68,7 @@ services:
     networks:
       - app-network
 
+  # ML Service (Arthur)
   ml:
     build: ./ml
     environment:
@@ -88,6 +79,7 @@ services:
     networks:
       - app-network
 
+  # PostgreSQL Database (Vova)
   db:
     image: postgres:16-alpine
     environment:
@@ -102,6 +94,7 @@ services:
     networks:
       - app-network
 
+  # Logs Database (Vova)
   logs-db:
     image: postgres:16-alpine
     environment:
@@ -113,6 +106,7 @@ services:
     networks:
       - app-network
 
+  # Prometheus (Vova)
   prometheus:
     image: prom/prometheus:v2.54.1
     volumes:
@@ -123,6 +117,7 @@ services:
     networks:
       - app-network
 
+  # Grafana (Vova)
   grafana:
     image: grafana/grafana:11.3.0
     environment:
@@ -136,6 +131,7 @@ services:
     networks:
       - app-network
 
+  # cAdvisor (Vova)
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.50.0
     volumes:
