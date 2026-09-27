@@ -1,0 +1,543 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Transport boardings prediction API",
+    "description": "Hourly boardings forecast for Moscow tram routes (LightGBM + PyTorch ensemble). `POST /predict` takes rows in the ETL `features_hourly` format: history with known `boardings` (56 days before the forecast start are used) and the hours to forecast with `boardings = null`.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "local run or Docker container"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Service and model status",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Model is not loaded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predict": {
+      "post": {
+        "summary": "Forecast boardings for the requested hours",
+        "operationId": "predict_predict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request: schema violation or rows that cannot be forecast",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Model is not loaded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse"
+      },
+      "FeatureRow": {
+        "properties": {
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id",
+            "description": "Tram route, one of [1, 5, 7, 11, 12, 17, 25, 26, 28, 50]"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "hour": {
+            "type": "integer",
+            "maximum": 23.0,
+            "minimum": 0.0,
+            "title": "Hour"
+          },
+          "boardings": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boardings",
+            "description": "Actual boardings; null for the hours to forecast"
+          },
+          "day_type": {
+            "type": "string",
+            "enum": [
+              "workday",
+              "saturday",
+              "sunday"
+            ],
+            "title": "Day Type",
+            "description": "Production calendar day profile"
+          },
+          "is_dayoff": {
+            "type": "boolean",
+            "title": "Is Dayoff"
+          },
+          "is_short_day": {
+            "type": "boolean",
+            "title": "Is Short Day"
+          },
+          "is_holiday": {
+            "type": "boolean",
+            "title": "Is Holiday"
+          },
+          "is_transfer_workday": {
+            "type": "boolean",
+            "title": "Is Transfer Workday"
+          },
+          "temperature_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature C"
+          },
+          "precipitation_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precipitation Mm"
+          },
+          "snowfall_cm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snowfall Cm"
+          },
+          "precip_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "rain",
+                  "snow",
+                  "sleet",
+                  "hail"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precip Type"
+          },
+          "wind_speed_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wind Speed Ms"
+          },
+          "humidity_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Humidity Pct"
+          },
+          "cloud_cover_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cloud Cover Pct"
+          },
+          "traffic_congestion_index": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Traffic Congestion Index",
+            "description": "2GIS travel time / free-flow time along the route"
+          },
+          "traffic_duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Traffic Duration S"
+          }
+        },
+        "type": "object",
+        "required": [
+          "route_id",
+          "date",
+          "hour",
+          "day_type",
+          "is_dayoff",
+          "is_short_day",
+          "is_holiday",
+          "is_transfer_workday"
+        ],
+        "title": "FeatureRow"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "OK",
+            "title": "Status"
+          },
+          "model_loaded": {
+            "type": "boolean",
+            "title": "Model Loaded"
+          },
+          "default_model": {
+            "type": "string",
+            "title": "Default Model"
+          },
+          "trained_on": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Trained On"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "model_loaded",
+          "default_model",
+          "trained_on",
+          "version"
+        ],
+        "title": "HealthResponse"
+      },
+      "PredictRequest": {
+        "properties": {
+          "model": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ensemble",
+                  "lightgbm",
+                  "pytorch",
+                  "baseline"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model",
+            "description": "Model; default is the best one on the competition platform (ensemble)"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin",
+            "description": "First forecast date. Default: the earliest date that has rows with boardings = null"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/FeatureRow"
+            },
+            "type": "array",
+            "maxItems": 200000,
+            "minItems": 1,
+            "title": "Rows",
+            "description": "History with known boardings (56 days before origin are used) + rows to forecast (boardings = null)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows"
+        ],
+        "title": "PredictRequest",
+        "examples": [
+          {
+            "model": "ensemble",
+            "origin": "2025-11-01",
+            "rows": [
+              {
+                "boardings": 5231,
+                "cloud_cover_pct": 100,
+                "date": "2025-10-31",
+                "day_type": "workday",
+                "hour": 8,
+                "humidity_pct": 88,
+                "is_dayoff": false,
+                "is_holiday": false,
+                "is_short_day": false,
+                "is_transfer_workday": false,
+                "precip_type": "none",
+                "precipitation_mm": 0.0,
+                "route_id": 17,
+                "snowfall_cm": 0.0,
+                "temperature_c": 3.1,
+                "traffic_congestion_index": 1.26,
+                "traffic_duration_s": 1800,
+                "wind_speed_ms": 2.4
+              },
+              {
+                "cloud_cover_pct": 100,
+                "date": "2025-11-05",
+                "day_type": "workday",
+                "hour": 8,
+                "humidity_pct": 91,
+                "is_dayoff": false,
+                "is_holiday": false,
+                "is_short_day": false,
+                "is_transfer_workday": false,
+                "precip_type": "snow",
+                "precipitation_mm": 0.2,
+                "route_id": 17,
+                "snowfall_cm": 0.1,
+                "temperature_c": 1.5,
+                "traffic_congestion_index": 1.26,
+                "traffic_duration_s": 1800,
+                "wind_speed_ms": 3.0
+              }
+            ]
+          }
+        ]
+      },
+      "PredictResponse": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "origin": {
+            "type": "string",
+            "format": "date",
+            "title": "Origin"
+          },
+          "horizon_days": {
+            "type": "integer",
+            "title": "Horizon Days",
+            "description": "Number of forecast dates"
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows"
+          },
+          "total_prediction": {
+            "type": "number",
+            "title": "Total Prediction"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "predictions": {
+            "items": {
+              "$ref": "#/components/schemas/Prediction"
+            },
+            "type": "array",
+            "title": "Predictions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model",
+          "origin",
+          "horizon_days",
+          "rows",
+          "total_prediction",
+          "predictions"
+        ],
+        "title": "PredictResponse"
+      },
+      "Prediction": {
+        "properties": {
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "hour": {
+            "type": "integer",
+            "title": "Hour"
+          },
+          "prediction": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Prediction",
+            "description": "Forecast boardings for the hour"
+          }
+        },
+        "type": "object",
+        "required": [
+          "route_id",
+          "date",
+          "hour",
+          "prediction"
+        ],
+        "title": "Prediction"
+      }
+    }
+  }
+}

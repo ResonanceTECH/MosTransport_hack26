@@ -1,0 +1,8 @@
+services:
+  ml:
+    build: .
+    image: transport-ml:1.0.0
+    container_name: transport-ml
+    ports:
+      - "${ML_PORT:-8080}:8080"
+    restart: unless-stopped
