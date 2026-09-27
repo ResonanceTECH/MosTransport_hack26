@@ -7,6 +7,8 @@ export interface DashboardFilters {
   route: string
   routes: string[]
   date: string
+  dateFrom?: string
+  dateTo?: string
   horizon: Horizon
   from: string
   to: string
@@ -19,10 +21,10 @@ export interface DashboardFilters {
 }
 
 const DEFAULT_COEFFS: Coefficients = {
-  k_weather: 1,
-  k_event: 1,
+  k_weather: 1.2,
+  k_event: 1.15,
   k_season: 1,
-  k_traffic: 1,
+  k_traffic: 1.1,
 }
 
 function todayIso(): string {
@@ -44,8 +46,10 @@ export function useDashboardFilters() {
       route,
       routes: route.split(',').filter(Boolean),
       date: params.get('date') ?? todayIso(),
+      dateFrom: params.get('date_from') || undefined,
+      dateTo: params.get('date_to') || undefined,
       horizon: (params.get('horizon') as Horizon) || 'day',
-      from: params.get('from') ?? '00:00',
+      from: params.get('from') ?? '06:00',
       to: params.get('to') ?? '23:00',
       stop: params.get('stop') || undefined,
       segmentFrom: params.get('segment_from') || undefined,
@@ -53,10 +57,10 @@ export function useDashboardFilters() {
       grouping: (params.get('grouping') as Grouping) || 'route',
       hour: parseNumber(params.get('hour'), 8),
       coefficients: {
-        k_weather: parseNumber(params.get('k_weather'), 1),
-        k_event: parseNumber(params.get('k_event'), 1),
-        k_season: parseNumber(params.get('k_season'), 1),
-        k_traffic: parseNumber(params.get('k_traffic'), 1),
+        k_weather: parseNumber(params.get('k_weather'), DEFAULT_COEFFS.k_weather),
+        k_event: parseNumber(params.get('k_event'), DEFAULT_COEFFS.k_event),
+        k_season: parseNumber(params.get('k_season'), DEFAULT_COEFFS.k_season),
+        k_traffic: parseNumber(params.get('k_traffic'), DEFAULT_COEFFS.k_traffic),
       },
     }
   }, [params])
@@ -76,6 +80,8 @@ export function useDashboardFilters() {
             trackAction('route_changed', { route: next.route })
           }
           if (next.date !== undefined) apply('date', next.date)
+          if (next.dateFrom !== undefined) apply('date_from', next.dateFrom)
+          if (next.dateTo !== undefined) apply('date_to', next.dateTo)
           if (next.horizon !== undefined) {
             apply('horizon', next.horizon)
             trackAction('horizon_changed', { horizon: next.horizon })
@@ -114,6 +120,8 @@ export function filtersToForecastQuery(filters: DashboardFilters) {
     route: filters.route,
     horizon: filters.horizon,
     date: filters.date,
+    date_from: filters.dateFrom,
+    date_to: filters.dateTo,
     stop: filters.stop,
     segment_from: filters.segmentFrom,
     segment_to: filters.segmentTo,
