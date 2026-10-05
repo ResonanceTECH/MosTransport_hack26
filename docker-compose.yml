@@ -149,6 +149,8 @@ services:
         VITE_DEMO_AUTH: "true"
     restart: unless-stopped
     environment:
+      PORT: "443"
+      VITE_API_PROXY: http://backend:1000
       API_BASE_URL: /api/v1
       KEYCLOAK_URL: ""
       KEYCLOAK_REALM: transport
@@ -156,12 +158,13 @@ services:
       USE_MSW: "false"
       DEMO_AUTH: "true"
       GRAFANA_URL: http://localhost:8020
-      MAP_STYLE_URL: https://basemaps.cartocdn.com/gl/positron-gl-style/style.json
+      # Empty: built-in raster style, so route and stops render even if tiles are blocked.
+      MAP_STYLE_URL: ""
+      MAP_TILES_URL: ${UI_MAP_TILES_URL:-}
       DEFAULT_DATE: ${UI_DEFAULT_DATE:-2025-11-05}
       DEFAULT_ROUTE: ${UI_DEFAULT_ROUTE:-17}
     ports:
       - "443:443"
-      - "8081:80"
     depends_on:
       backend:
         condition: service_healthy

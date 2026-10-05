@@ -139,7 +139,7 @@ export function KpiBar() {
   const peakLoad = data?.peak_hour_load
   const busiest = data?.busiest_stop
   const occupancyPct = busiest
-    ? Math.min(99, Math.max(8, Math.round((busiest.load / 320) * 100)))
+    ? Math.round(busiest.occupancy_pct ?? (busiest.load / 320) * 100)
     : null
 
   const weekDelta = 12
@@ -147,10 +147,9 @@ export function KpiBar() {
     1,
     Number(filters.to.slice(0, 2)) - Number(filters.from.slice(0, 2)) + 1,
   )
+  const avgHourLoad = data?.avg_hour_load ?? (data ? data.total_passengers / hoursInRange : 0)
   const peakVsAvg =
-    peakLoad && data
-      ? Math.round((peakLoad / Math.max(data.total_passengers / hoursInRange, 1) - 1) * 100)
-      : 28
+    peakLoad && data ? Math.round((peakLoad / Math.max(avgHourLoad, 1) - 1) * 100) : 0
 
   const items = [
     {

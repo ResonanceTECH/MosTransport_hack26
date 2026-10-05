@@ -205,12 +205,30 @@ async def filter_options() -> dict:
     }
 
 
+@router.get("/stats/capacity")
+async def route_capacity() -> dict:
+    """95th percentile of known hourly boardings per route: the reference for "100 % load"."""
+    rows = await db.pool().fetch(
+        """SELECT route_id,
+                  percentile_cont(0.95) WITHIN GROUP (ORDER BY boardings) AS p95,
+                  max(boardings) AS max_hourly
+           FROM features_hourly WHERE boardings IS NOT NULL
+           GROUP BY route_id ORDER BY route_id""")
+    return {"routes": [
+        {"route_id": str(r["route_id"]), "p95_hourly": float(r["p95"] or 0.0),
+         "max_hourly": float(r["max_hourly"] or 0.0)}
+        for r in rows
+    ]}
+
+
 @router.get("/coverage")
 async def coverage() -> dict:
     rows = await db.pool().fetch(
         """SELECT route_id, split, date_from, date_to, rows_total, rows_to_forecast, boardings_total
            FROM v_data_coverage ORDER BY route_id, split""")
-    return {"coverage": [
+    last_known = await db.pool().fetchval(
+        "SELECT max(date) FROM features_hourly WHERE boardings IS NOT NULL")
+    return {"last_known_date": last_known.isoformat() if last_known else None, "coverage": [
         {"route_id": str(r["route_id"]), "split": r["split"],
          "date_from": r["date_from"].isoformat(), "date_to": r["date_to"].isoformat(),
          "rows_total": int(r["rows_total"]), "rows_to_forecast": int(r["rows_to_forecast"]),

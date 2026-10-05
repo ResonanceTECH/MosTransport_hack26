@@ -25,7 +25,7 @@ import type { IconSvgElement } from '@hugeicons/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, type Coefficients } from '@/shared/api/endpoints'
-import { useDashboardFilters } from '@/features/filters/useDashboardFilters'
+import { filtersToForecastQuery, useDashboardFilters } from '@/features/filters/useDashboardFilters'
 import { Icon } from '@/shared/ui/Icon'
 import { QueryState } from '@/shared/ui/QueryState'
 
@@ -73,19 +73,10 @@ export function CoefficientsPanel({
     queryFn: () => api.getFactors(),
   })
 
+  const kpiParams = useMemo(() => filtersToForecastQuery(filters), [filters])
   const kpiQuery = useQuery({
-    queryKey: ['kpi-effect', filters.route, filters.date, filters.horizon, filters.hour, filters.coefficients],
-    queryFn: () =>
-      api.getForecastKpi({
-        route: filters.route,
-        horizon: filters.horizon,
-        date: filters.date,
-        hour: filters.hour,
-        k_weather: filters.coefficients.k_weather,
-        k_event: filters.coefficients.k_event,
-        k_season: filters.coefficients.k_season,
-        k_traffic: filters.coefficients.k_traffic,
-      }),
+    queryKey: ['kpi-effect', kpiParams],
+    queryFn: () => api.getForecastKpi(kpiParams),
     staleTime: 30_000,
   })
 

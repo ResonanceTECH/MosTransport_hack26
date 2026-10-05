@@ -78,8 +78,11 @@ class ETLClient:
     async def filter_options(self, request_id: str | None = None) -> dict:
         return await self._request("GET", "/etl/v1/filters/options", request_id)
 
-    async def coverage(self, request_id: str | None = None) -> list[dict]:
-        return (await self._request("GET", "/etl/v1/coverage", request_id))["coverage"]
+    async def coverage(self, request_id: str | None = None) -> dict:
+        return await self._request("GET", "/etl/v1/coverage", request_id)
+
+    async def route_capacity(self, request_id: str | None = None) -> list[dict]:
+        return (await self._request("GET", "/etl/v1/stats/capacity", request_id))["routes"]
 
     async def load_run(self, cache_key: str, request_id: str | None = None) -> dict:
         return await self._request("GET", "/etl/v1/forecasts", request_id, params={"cache_key": cache_key})

@@ -48,11 +48,17 @@ export function HeatmapChart({ height = '100%', compact = false }: HeatmapChartP
 
     const raw = data.cells.filter((c) => stopIndex.has(c.stop_id) && hourIndex.has(c.hour))
     const maxVal = raw.reduce((m, c) => Math.max(m, c.value), 1)
+    const showPax = metric === 'pax'
+    const unit = showPax ? ' пасс.' : '%'
+    // Percent is relative to stop capacity (from the API), so coefficients move it;
+    // the max-relative fallback is only for responses without `pct`.
+    const cellValue = (c: (typeof raw)[number]) =>
+      showPax ? Math.round(c.value) : Math.round(c.pct ?? (c.value / maxVal) * 100)
+    const visualMax = showPax ? Math.max(1, Math.ceil(maxVal)) : 100
 
-    const cells = raw.map((c) => {
-      const pct = Math.round((c.value / maxVal) * 100)
-      return [hourIndex.get(c.hour)!, stopIndex.get(c.stop_id)!, pct] as [number, number, number]
-    })
+    const cells = raw.map(
+      (c) => [hourIndex.get(c.hour)!, stopIndex.get(c.stop_id)!, cellValue(c)] as [number, number, number],
+    )
 
     return {
       tooltip: {
@@ -62,7 +68,7 @@ export function HeatmapChart({ height = '100%', compact = false }: HeatmapChartP
         textStyle: { color: '#0A1F44', fontSize: 12 },
         formatter: (p: { value: [number, number, number] }) => {
           const [hi, si, val] = p.value
-          return `${stopLabels[si]}<br/>${String(hours[hi]).padStart(2, '0')}:00 — ${val}%`
+          return `${stopLabels[si]}<br/>${String(hours[hi]).padStart(2, '0')}:00 — ${val.toLocaleString('ru-RU')}${unit}`
         },
       },
       grid: {
@@ -89,14 +95,14 @@ export function HeatmapChart({ height = '100%', compact = false }: HeatmapChartP
       },
       visualMap: {
         min: 0,
-        max: 100,
+        max: visualMax,
         calculable: false,
         orient: 'vertical' as const,
         right: 0,
         top: 'center',
         itemHeight: compact ? 80 : 100,
         itemWidth: 8,
-        text: ['100', '0'],
+        text: [String(visualMax), '0'],
         textStyle: { color: '#6B819C', fontSize: 10 },
         inRange: {
           color: ['#2E9E6B', '#A8D08D', '#F5D76E', '#F0A202', '#E67E22', '#D64545'],
@@ -117,7 +123,7 @@ export function HeatmapChart({ height = '100%', compact = false }: HeatmapChartP
           right: 0,
           top: 0,
           style: {
-            text: 'Загрузка, %',
+            text: showPax ? 'Пассажиры' : 'Загрузка, %',
             fill: '#6B819C',
             fontSize: 10,
             fontWeight: 600,
@@ -125,7 +131,7 @@ export function HeatmapChart({ height = '100%', compact = false }: HeatmapChartP
         },
       ],
     }
-  }, [heatmapQuery.data, compact])
+  }, [heatmapQuery.data, compact, metric])
 
   return (
     <Paper

@@ -4,9 +4,9 @@ import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { Add01Icon, Gps01Icon, MinusSignIcon } from '@hugeicons/core-free-icons'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import type { FeatureCollection, LineString, Point } from 'geojson'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Map, {
   Layer,
   Marker,
@@ -17,20 +17,24 @@ import Map, {
   type MapRef,
 } from 'react-map-gl/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import './maplibreWorker'
 import { api, type MapStopLoad } from '@/shared/api/endpoints'
 import {
   filtersToForecastQuery,
   useDashboardFilters,
 } from '@/features/filters/useDashboardFilters'
-import { appConfig } from '@/shared/config/env'
 import { LOAD_LEVEL_LABELS, loadColor } from '@/shared/lib/loadLevel'
 import { LOAD_COLORS } from '@/shared/theme/theme'
 import { Icon } from '@/shared/ui/Icon'
 import { QueryState } from '@/shared/ui/QueryState'
+import { resolveMapStyle } from './mapStyle'
 
-const MOSCOW_VIEW = { longitude: 37.65, latitude: 55.855, zoom: 11.2 }
+const MOSCOW_VIEW = { longitude: 37.62, latitude: 55.76, zoom: 10.5 }
+const FIT_PADDING = { top: 48, bottom: 72, left: 48, right: 220 }
 
-const LABEL_STOPS = new Set(['Останкино', 'ВДНХ', 'Медведково'])
+function shortName(name: string): string {
+  return name.replace('Метро ', '').replace(/[«»]/g, '')
+}
 
 export interface MapLibreForecastMapProps {
   onStopSelect?: (stop: MapStopLoad) => void
@@ -144,9 +148,12 @@ export function MapLibreForecastMap({
     enabled: Boolean(primaryRoute),
   })
 
+  // Keep the previous hour's data while the next one loads, so the map is not
+  // unmounted (and its view reset) on every slider or coefficient change.
   const mapQuery = useQuery({
     queryKey: ['forecast-map', queryParams],
     queryFn: () => api.getForecastMap(queryParams),
+    placeholderData: keepPreviousData,
   })
 
   const [popupStop, setPopupStop] = useState<MapStopLoad | null>(null)
@@ -179,6 +186,7 @@ export function MapLibreForecastMap({
           stop_id: s.stop_id,
           name: s.name,
           load: s.load,
+          occupancy: s.occupancy_pct ?? 0,
           level: s.level,
           sequence: s.sequence,
           is_selected: s.stop_id === activeStopId,
@@ -194,13 +202,43 @@ export function MapLibreForecastMap({
     () =>
       stops.filter(
         (s) =>
-          LABEL_STOPS.has(s.name) ||
-          s.name === 'ВДНХ' ||
-          s.name === 'Медведково' ||
-          s.name === 'Останкино',
+          s.stop_id === firstStop?.stop_id ||
+          s.stop_id === lastStop?.stop_id ||
+          s.stop_id === activeStopId,
       ),
-    [stops],
+    [stops, firstStop?.stop_id, lastStop?.stop_id, activeStopId],
   )
+
+  const mapStyle = useMemo(() => resolveMapStyle(), [])
+  const [mapLoaded, setMapLoaded] = useState(false)
+
+  // Frame the selected route: stops of other routes lie far outside a fixed view.
+  const fitToRoute = useCallback(() => {
+    const map = mapRef.current
+    if (!map) return
+    const points: number[][] = [
+      ...stops.map((s) => [s.lon, s.lat]),
+      ...(geometryQuery.data?.coordinates ?? []),
+    ]
+    if (!points.length) return
+    const lons = points.map((p) => p[0])
+    const lats = points.map((p) => p[1])
+    map.resize()
+    map.fitBounds(
+      [
+        [Math.min(...lons), Math.min(...lats)],
+        [Math.max(...lons), Math.max(...lats)],
+      ],
+      { padding: FIT_PADDING, maxZoom: 14.5, duration: 400 },
+    )
+  }, [stops, geometryQuery.data?.coordinates])
+
+  // Refit only when the set of stops changes, not on every hour/coefficient update.
+  const boundsKey = `${primaryRoute}:${stops.map((s) => s.stop_id).join(',')}:${geometryQuery.data?.coordinates?.length ?? 0}`
+  useEffect(() => {
+    if (mapLoaded) fitToRoute()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapLoaded, boundsKey])
 
   const handleMapClick = useCallback(
     (e: MapLayerMouseEvent) => {
@@ -253,11 +291,15 @@ export function MapLibreForecastMap({
         <Map
           ref={mapRef}
           initialViewState={MOSCOW_VIEW}
-          mapStyle={appConfig.MAP_STYLE_URL}
-          style={{ width: '100%', height: '100%' }}
+          mapStyle={mapStyle}
+          style={{ width: '100%', height: '100%', minHeight: 200 }}
           interactiveLayerIds={['stops-circle']}
           onClick={handleMapClick}
-          attributionControl={false}
+          onLoad={() => {
+            setMapLoaded(true)
+            fitToRoute()
+          }}
+          attributionControl={{ compact: true }}
         >
           {showControls ? (
             <NavigationControl position="top-left" showCompass={false} visualizePitch={false} />
@@ -300,7 +342,7 @@ export function MapLibreForecastMap({
                   11,
                   ['get', 'is_terminal'],
                   8,
-                  ['interpolate', ['linear'], ['get', 'load'], 0, 6, 80, 9, 160, 12, 240, 15],
+                  ['interpolate', ['linear'], ['get', 'occupancy'], 0, 6, 50, 9, 100, 12, 150, 15],
                 ],
                 'circle-stroke-width': [
                   'case',
@@ -339,7 +381,7 @@ export function MapLibreForecastMap({
                   pointerEvents: 'none',
                 }}
               >
-                {s.name.replace('Метро ', '').replace(' (конечная)', '').replace(' (цирк)', '')}
+                {shortName(s.name)}
               </Typography>
             </Marker>
           ))}
@@ -362,6 +404,7 @@ export function MapLibreForecastMap({
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 {LOAD_LEVEL_LABELS[popupStop.level]} загрузка
+                {popupStop.occupancy_pct != null ? ` · ${Math.round(popupStop.occupancy_pct)}%` : ''}
               </Typography>
             </Popup>
           ) : null}
@@ -394,7 +437,7 @@ export function MapLibreForecastMap({
             </IconButton>
             <IconButton
               size="small"
-              onClick={() => mapRef.current?.flyTo({ ...MOSCOW_VIEW, duration: 500 })}
+              onClick={fitToRoute}
               sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}
             >
               <Icon icon={Gps01Icon} size={16} />

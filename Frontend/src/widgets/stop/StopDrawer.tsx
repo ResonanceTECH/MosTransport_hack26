@@ -25,14 +25,13 @@ export interface StopDrawerProps {
 export function StopDrawer({ open, onClose, stop }: StopDrawerProps) {
   const { filters, patch } = useDashboardFilters()
 
+  const queryParams = useMemo(
+    () => ({ ...filtersToForecastQuery(filters), stop: stop?.stop_id, grouping: 'stop' as const }),
+    [filters, stop?.stop_id],
+  )
   const forecastQuery = useQuery({
-    queryKey: ['forecast-stop-drawer', filters.route, stop?.stop_id, filters.date],
-    queryFn: () =>
-      api.getForecast({
-        ...filtersToForecastQuery(filters),
-        stop: stop!.stop_id,
-        grouping: 'stop',
-      }),
+    queryKey: ['forecast-stop-drawer', queryParams],
+    queryFn: () => api.getForecast(queryParams),
     enabled: open && Boolean(stop),
   })
 

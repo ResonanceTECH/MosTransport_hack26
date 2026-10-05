@@ -546,6 +546,9 @@ components:
           type: integer
         baseline_load:
           type: number
+        occupancy_pct:
+          type: number
+          description: Load as a percentage of the stop's hourly capacity
     ForecastMapResponse:
       type: object
       required: [stops, hour, meta]
@@ -570,6 +573,9 @@ components:
           type: integer
         value:
           type: number
+        pct:
+          type: number
+          description: Load as a percentage of the stop's hourly capacity
     HeatmapResponse:
       type: object
       required: [stops, cells, meta]
@@ -612,6 +618,11 @@ components:
               type: string
             load:
               type: number
+            occupancy_pct:
+              type: number
+        avg_hour_load:
+          type: number
+          description: Average hourly load within the selected hours
         delta_vs_baseline_percent:
           type: number
         meta:

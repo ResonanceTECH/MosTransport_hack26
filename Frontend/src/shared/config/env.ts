@@ -8,7 +8,10 @@ export interface AppRuntimeConfig {
   USE_MSW: boolean | string
   DEMO_AUTH: boolean | string
   GRAFANA_URL: string
+  /** Vector style JSON URL; empty selects the built-in raster style. */
   MAP_STYLE_URL: string
+  /** Comma-separated raster tile URL templates for the built-in style. */
+  MAP_TILES_URL: string
   MAP_PROVIDER: MapProvider
   /** Browser SDK key — never hardcode; only via env / runtime config */
   MAP_2GIS_API_KEY: string
@@ -49,10 +52,8 @@ function readConfig(): AppRuntimeConfig {
     USE_MSW: asBool(runtime.USE_MSW ?? env.VITE_USE_MSW, true),
     DEMO_AUTH: asBool(runtime.DEMO_AUTH ?? env.VITE_DEMO_AUTH, true),
     GRAFANA_URL: runtime.GRAFANA_URL || env.VITE_GRAFANA_URL || '',
-    MAP_STYLE_URL:
-      runtime.MAP_STYLE_URL ||
-      env.VITE_MAP_STYLE_URL ||
-      'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+    MAP_STYLE_URL: runtime.MAP_STYLE_URL ?? env.VITE_MAP_STYLE_URL ?? '',
+    MAP_TILES_URL: runtime.MAP_TILES_URL || env.VITE_MAP_TILES_URL || '',
     MAP_PROVIDER: normalizeMapProvider(
       runtime.MAP_PROVIDER || env.VITE_MAP_PROVIDER || 'maplibre',
     ),

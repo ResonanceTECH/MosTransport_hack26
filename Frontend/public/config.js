@@ -6,5 +6,6 @@ window.__APP_CONFIG__ = {
   USE_MSW: true,
   DEMO_AUTH: true,
   GRAFANA_URL: 'http://localhost:3000',
-  MAP_STYLE_URL: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+  MAP_STYLE_URL: '',
+  MAP_TILES_URL: '',
 }

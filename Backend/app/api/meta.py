@@ -55,7 +55,8 @@ async def model_info(request: Request) -> dict:
     trained_on = health.get("trained_on") or {}
     metrics = health.get("platform_scores") or {}
     wape = float(metrics.get(health.get("default_model", "ensemble"), 0.88265))
-    coverage_from, coverage_to = await forecast_service.coverage(getattr(request.state, "request_id", None))
+    cov = await forecast_service.coverage(getattr(request.state, "request_id", None))
+    coverage_from, coverage_to = cov.date_from, cov.date_to
     return {
         "name": f"Прогноз посадок ({health.get('default_model', 'ensemble')})",
         "version": health.get("version", "1.0.0"),

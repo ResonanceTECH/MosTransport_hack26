@@ -71,7 +71,7 @@ export function StopInfoCard({ stop, fallbackName = 'ВДНХ' }: StopInfoCardPr
   const level = stop?.level ?? 'high'
   const occupancy = useMemo(() => {
     if (!stop) return 87
-    return Math.min(99, Math.max(8, Math.round((stop.load / 320) * 100)))
+    return Math.round(stop.occupancy_pct ?? (stop.load / 320) * 100)
   }, [stop])
 
   const weekDelta = 18

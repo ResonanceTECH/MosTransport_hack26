@@ -21,6 +21,8 @@ _LIST_FILTERS = ("day_type", "precip_type", "weather_condition", "split")
 _INT_LIST_FILTERS = ("day_of_week", "month")
 _BOOL_FILTERS = ("is_holiday", "is_dayoff")
 _FLOAT_FILTERS = ("temp_min", "temp_max", "precipitation_max", "wind_max", "congestion_min", "congestion_max")
+# Period covered when the UI sends a single `date`: the horizon defines its length.
+_HORIZON_SPAN_DAYS = {"day": 0, "month": 29, "year": 364}
 
 
 def service(request: Request) -> ForecastService:
@@ -69,6 +71,7 @@ async def build_query(request: Request, *, default_span_days: int = 0) -> Foreca
     routes = parse_routes(params.get("route"), available)
 
     horizon = params.get("horizon") or "day"
+    default_span_days = max(default_span_days, _HORIZON_SPAN_DAYS.get(horizon, 0))
     date_param = params.get("date")
     date_from_param = params.get("date_from")
     date_to_param = params.get("date_to")
@@ -80,10 +83,9 @@ async def build_query(request: Request, *, default_span_days: int = 0) -> Foreca
             date_from = Date.fromisoformat(date_param)
             date_to = date_from + timedelta(days=default_span_days)
         else:
-            coverage_from, coverage_to = await forecast_service.coverage(request_id)
-            date_from = coverage_to - timedelta(days=default_span_days)
-            date_to = coverage_to
-            date_from = max(date_from, coverage_from)
+            cov = await forecast_service.coverage(request_id)
+            date_from = max(cov.date_from, cov.date_to - timedelta(days=default_span_days))
+            date_to = cov.date_to
     except ValueError:
         raise ValidationException("Некорректный формат даты, ожидается YYYY-MM-DD")
 
@@ -110,6 +112,8 @@ async def build_query(request: Request, *, default_span_days: int = 0) -> Foreca
         hour_to=parse_hour(params.get("to"), 23),
         grouping=params.get("grouping") or "route",
         stop=params.get("stop") or None,
+        segment_from=params.get("segment_from") or None,
+        segment_to=params.get("segment_to") or None,
         hour=int(params["hour"]) if params.get("hour") not in (None, "") else None,
         coefficients=coefficients,
         filters=_extra_filters(request),

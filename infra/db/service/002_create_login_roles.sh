@@ -21,9 +21,10 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
 BEGIN;
 
 -- ETL owns ingestion: full read/write on the service tables.
+-- TRUNCATE is granted explicitly because reloading the dataset replaces features_hourly.
 CREATE ROLE :"etl_user" LOGIN PASSWORD :'etl_password';
 GRANT USAGE ON SCHEMA public TO :"etl_user";
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO :"etl_user";
+GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE ON ALL TABLES IN SCHEMA public TO :"etl_user";
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO :"etl_user";
 
 -- Backend reads reference/feature data and writes forecast + audit rows.
@@ -44,7 +45,7 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO :"grafana_user";
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
     GRANT SELECT ON TABLES TO :"backend_user", :"grafana_user";
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO :"etl_user";
+    GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE ON TABLES TO :"etl_user";
 
 COMMIT;
 SQL

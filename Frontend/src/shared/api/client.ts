@@ -1,6 +1,7 @@
 import { appConfig } from '@/shared/config/env'
 import { ApiError } from '@/shared/api/errors'
 import { getAccessToken, refreshAccessToken, forceLogin } from '@/shared/auth/token'
+import { uuid } from '@/shared/lib/uuid'
 
 export type QueryValue = string | number | boolean | null | undefined
 
@@ -56,7 +57,7 @@ export async function apiRequest<T = unknown>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const requestId = crypto.randomUUID()
+  const requestId = uuid()
   const headers = new Headers(options.headers)
   headers.set('X-Request-ID', requestId)
   headers.set('Accept', 'application/json')

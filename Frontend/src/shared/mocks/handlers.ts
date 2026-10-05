@@ -1,6 +1,7 @@
 import { http, HttpResponse, type HttpHandler } from 'msw'
 import type { components } from '../api/schema'
 import { LOAD_THRESHOLDS } from '../config/loadThresholds'
+import { uuid } from '../lib/uuid'
 import {
   baselineLoad,
   coeffProduct,
@@ -21,7 +22,7 @@ type UserScenarioCreate = components['schemas']['UserScenarioCreate']
 const userScenarios = new Map<string, UserScenario>()
 
 function requestId(request: Request): string {
-  return request.headers.get('X-Request-ID') ?? crypto.randomUUID()
+  return request.headers.get('X-Request-ID') ?? uuid()
 }
 
 function apiError(message: string, request_id: string, status: number, code?: string) {
@@ -450,7 +451,7 @@ export const handlers: HttpHandler[] = [
       return apiError('Forbidden', id, 403, 'forbidden')
     }
     return HttpResponse.json(
-      { job_id: crypto.randomUUID(), status: 'accepted' },
+      { job_id: uuid(), status: 'accepted' },
       { status: 202, headers: { 'X-Request-ID': requestId(request) } },
     )
   }),
@@ -481,7 +482,7 @@ export const handlers: HttpHandler[] = [
     const body = (await request.json()) as UserScenarioCreate
     const token = request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '').trim() ?? 'demo'
     const scenario: UserScenario = {
-      id: crypto.randomUUID(),
+      id: uuid(),
       user_id: token.slice(0, 32),
       name: body.name,
       coefficients: body.coefficients,

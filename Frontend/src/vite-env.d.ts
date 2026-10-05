@@ -9,6 +9,7 @@ interface ImportMetaEnv {
   readonly VITE_DEMO_AUTH?: string
   readonly VITE_GRAFANA_URL?: string
   readonly VITE_MAP_STYLE_URL?: string
+  readonly VITE_MAP_TILES_URL?: string
   readonly VITE_MAP_PROVIDER?: string
   readonly VITE_2GIS_API_KEY?: string
   readonly VITE_YANDEX_MAPS_API_KEY?: string

@@ -1,5 +1,5 @@
-# Multi-stage frontend build for MosTransport dispatcher UI
-FROM node:22-alpine AS build
+# MosTransport dispatcher UI: production build served by `vite preview` (no nginx).
+FROM node:22-alpine
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -10,14 +10,8 @@ ARG VITE_USE_MSW=false
 ARG VITE_DEMO_AUTH=true
 ENV VITE_USE_MSW=$VITE_USE_MSW \
     VITE_DEMO_AUTH=$VITE_DEMO_AUTH
-RUN npm run build
+RUN npm run build && chmod +x docker-entrypoint.sh
 
-FROM nginx:alpine AS runtime
-RUN apk add --no-cache openssl
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY docker-entrypoint.sh /docker-entrypoint.d/40-runtime-config.sh
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY public/config.template.js /usr/share/nginx/html/config.template.js
-RUN chmod +x /docker-entrypoint.d/40-runtime-config.sh
-EXPOSE 80 443
-CMD ["nginx", "-g", "daemon off;"]
+ENV PORT=443
+EXPOSE 443
+CMD ["./docker-entrypoint.sh"]

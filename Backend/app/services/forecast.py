@@ -32,6 +32,19 @@ FILTER_FIELDS = (
     "is_holiday", "is_dayoff", "temp_min", "temp_max", "precipitation_max",
     "wind_max", "congestion_min", "congestion_max",
 )
+# Bump when the way predictions are produced changes, so stale stored runs are not reused.
+CACHE_VERSION = 2
+# A stop at its route's historical p95 hourly demand is shown as this share of capacity.
+P95_OCCUPANCY = 0.85
+LEVEL_MEDIUM_PCT = 30.0
+LEVEL_HIGH_PCT = 70.0
+
+
+def shift_years(value: Date, years: int) -> Date:
+    try:
+        return value.replace(year=value.year + years)
+    except ValueError:  # 29 February in a non-leap target year
+        return value.replace(year=value.year + years, day=28)
 
 
 @dataclass
@@ -44,10 +57,14 @@ class ForecastQuery:
     hour_to: int = 23
     grouping: str = "route"
     stop: str | None = None
+    segment_from: str | None = None
+    segment_to: str | None = None
     hour: int | None = None
     coefficients: dict[str, float] = field(default_factory=dict)
     filters: dict[str, Any] = field(default_factory=dict)
     model: str = settings.DEFAULT_MODEL
+    # Whole years the requested period was moved by to land inside the dataset.
+    year_shift: int = 0
 
     @property
     def multiplier(self) -> float:
@@ -58,12 +75,22 @@ class ForecastQuery:
 
     def cache_key(self) -> str:
         payload = {
+            "v": CACHE_VERSION,
             "routes": sorted(self.routes), "model": self.model,
             "date_from": self.date_from.isoformat(), "date_to": self.date_to.isoformat(),
             "hour_from": self.hour_from, "hour_to": self.hour_to,
             "filters": {k: self.filters[k] for k in sorted(self.filters)},
         }
         return hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest()
+
+    def dataset_date(self, requested: str | None) -> str | None:
+        """Translate a date from the UI into the dataset calendar."""
+        if not requested:
+            return None
+        try:
+            return shift_years(Date.fromisoformat(requested), self.year_shift).isoformat()
+        except ValueError:
+            return None
 
 
 @dataclass
@@ -151,47 +178,76 @@ def validate_coefficients(coefficients: dict[str, float]) -> None:
                 f"Коэффициент {name} должен быть в диапазоне {settings.K_MIN}–{settings.K_MAX}")
 
 
+@dataclass
+class Coverage:
+    date_from: Date
+    date_to: Date
+    # Last date with observed boardings; later dates are forecast-only.
+    last_known: Date
+
+
 class ForecastService:
     def __init__(self, etl: ETLClient, ml: MLClient):
         self.etl = etl
         self.ml = ml
-        self._coverage: tuple[Date, Date] | None = None
+        self._coverage: Coverage | None = None
+        self._capacity: dict[int, float] | None = None
 
-    async def coverage(self, request_id: str | None = None) -> tuple[Date, Date]:
-        """Earliest and latest date present in features_hourly."""
+    async def coverage(self, request_id: str | None = None) -> Coverage:
         if self._coverage is None:
-            rows = await self.etl.coverage(request_id)
+            payload = await self.etl.coverage(request_id)
+            rows = payload.get("coverage") or []
             if not rows:
                 raise ValidationException("В базе нет данных для прогноза")
-            self._coverage = (
-                min(Date.fromisoformat(r["date_from"]) for r in rows),
-                max(Date.fromisoformat(r["date_to"]) for r in rows),
-            )
+            date_from = min(Date.fromisoformat(r["date_from"]) for r in rows)
+            date_to = max(Date.fromisoformat(r["date_to"]) for r in rows)
+            last_known = Date.fromisoformat(payload["last_known_date"]) if payload.get("last_known_date") else date_to
+            self._coverage = Coverage(date_from, date_to, last_known)
         return self._coverage
 
+    async def capacity(self, request_id: str | None = None) -> dict[int, float]:
+        """Hourly boardings per route that corresponds to 100 % load."""
+        if self._capacity is None:
+            rows = await self.etl.route_capacity(request_id)
+            self._capacity = {int(r["route_id"]): max(float(r["p95_hourly"]) / P95_OCCUPANCY, 1.0) for r in rows}
+        return self._capacity
+
     async def clamp(self, query: ForecastQuery, request_id: str | None = None) -> str | None:
-        """Move a requested period into the range covered by the dataset."""
-        available_from, available_to = await self.coverage(request_id)
-        if query.date_from >= available_from and query.date_to <= available_to:
+        """Move a requested period into the range covered by the dataset.
+
+        Dates in other years are mapped to the same calendar days of the dataset
+        year, so "today" in the UI shows the analogous day rather than an edge date.
+        """
+        cov = await self.coverage(request_id)
+        if query.date_from >= cov.date_from and query.date_to <= cov.date_to:
             return None
-        span = (query.date_to - query.date_from).days
         original = (query.date_from, query.date_to)
-        if query.date_from > available_to:
-            query.date_to = available_to
-            query.date_from = max(available_from, available_to - timedelta(days=span))
-        elif query.date_to < available_from:
-            query.date_from = available_from
-            query.date_to = min(available_to, available_from + timedelta(days=span))
+
+        candidates = {cov.date_to.year - query.date_to.year, cov.date_from.year - query.date_from.year}
+        for years in sorted(candidates, key=abs):
+            shifted_from, shifted_to = shift_years(query.date_from, years), shift_years(query.date_to, years)
+            if shifted_from >= cov.date_from and shifted_to <= cov.date_to:
+                query.date_from, query.date_to, query.year_shift = shifted_from, shifted_to, years
+                return (f"Данных за {original[0]}—{original[1]} нет; показан аналогичный период "
+                        f"{query.date_from}—{query.date_to}.")
+
+        span = (query.date_to - query.date_from).days
+        if query.date_from > cov.date_to:
+            query.date_to = cov.date_to
+            query.date_from = max(cov.date_from, cov.date_to - timedelta(days=span))
+        elif query.date_to < cov.date_from:
+            query.date_from = cov.date_from
+            query.date_to = min(cov.date_to, cov.date_from + timedelta(days=span))
         else:
-            query.date_from = max(query.date_from, available_from)
-            query.date_to = min(query.date_to, available_to)
+            query.date_from = max(query.date_from, cov.date_from)
+            query.date_to = min(query.date_to, cov.date_to)
         return (f"Запрошенный период {original[0]}—{original[1]} выходит за границы данных "
-                f"({available_from}—{available_to}); показан период "
-                f"{query.date_from}—{query.date_to}.")
+                f"({cov.date_from}—{cov.date_to}); показан период {query.date_from}—{query.date_to}.")
 
     async def run(self, query: ForecastQuery, request_id: str | None = None,
                   user_id: str | None = None) -> ForecastResult:
         note = await self.clamp(query, request_id)
+        cov = await self.coverage(request_id)
         cache_key = query.cache_key()
 
         window = await self.etl.window(
@@ -218,7 +274,10 @@ class ForecastService:
                 excluded_by_filters=excluded, coverage_note=note,
             )
 
-        origin = query.date_from
+        # The model builds its profiles from the 56 days before `origin`. For a
+        # period after the last observed day, start the forecast right after it,
+        # otherwise the history window would contain no boardings at all.
+        origin = min(query.date_from, cov.last_known + timedelta(days=1))
         history = await self.etl.history(
             query.routes,
             (origin - timedelta(days=settings.HISTORY_DAYS)).isoformat(),
@@ -272,6 +331,33 @@ class ForecastService:
 # Aggregation helpers: turn per-route-hour predictions into the view shapes.
 # --------------------------------------------------------------------------
 
+def selection_weights(query: ForecastQuery, stops_by_route: dict[int, list[dict]]) -> dict[int, float] | None:
+    """Share of each route's boardings covered by the selected stop or segment.
+
+    None means no stop-level selection: whole routes are counted.
+    """
+    if query.stop:
+        weights = {route_id: 0.0 for route_id in query.routes}
+        for route_id, stops in stops_by_route.items():
+            for stop in stops:
+                if stop["stop_id"] == query.stop:
+                    weights[route_id] = float(stop["load_weight"])
+        if not any(weights.values()):
+            raise ValidationException(f"Остановка {query.stop} не относится к выбранным маршрутам")
+        return weights
+    if query.segment_from and query.segment_to:
+        weights = {route_id: 0.0 for route_id in query.routes}
+        for route_id, stops in stops_by_route.items():
+            sequence = {stop["stop_id"]: stop["sequence"] for stop in stops}
+            if query.segment_from in sequence and query.segment_to in sequence:
+                low, high = sorted((sequence[query.segment_from], sequence[query.segment_to]))
+                weights[route_id] = sum(float(s["load_weight"]) for s in stops if low <= s["sequence"] <= high)
+        if not any(weights.values()):
+            raise ValidationException("Участок не относится к выбранным маршрутам")
+        return weights
+    return None
+
+
 def _bucket(date_str: str, hour: int, horizon: str) -> str:
     if horizon == "day":
         return f"{date_str}T{hour:02d}:00:00"
@@ -280,7 +366,8 @@ def _bucket(date_str: str, hour: int, horizon: str) -> str:
     return date_str[:7]
 
 
-def time_series(result: ForecastResult, query: ForecastQuery, weight: float = 1.0) -> list[dict]:
+def time_series(result: ForecastResult, query: ForecastQuery,
+                weights: dict[int, float] | None = None) -> list[dict]:
     baseline: dict[str, float] = defaultdict(float)
     actual: dict[str, float] = defaultdict(float)
     has_actual: dict[str, bool] = defaultdict(bool)
@@ -288,6 +375,7 @@ def time_series(result: ForecastResult, query: ForecastQuery, weight: float = 1.
     for row in result.predictions:
         if not query.hour_from <= int(row["hour"]) <= query.hour_to:
             continue
+        weight = 1.0 if weights is None else weights.get(int(row["route_id"]), 0.0)
         key = _bucket(row["date"], int(row["hour"]), query.horizon)
         baseline[key] += float(row["prediction"]) * weight
         fact = result.actuals.get((int(row["route_id"]), row["date"], int(row["hour"])))
@@ -307,29 +395,31 @@ def time_series(result: ForecastResult, query: ForecastQuery, weight: float = 1.
     ]
 
 
-def route_hour_totals(result: ForecastResult, date: str) -> dict[int, float]:
-    """Total predicted boardings per hour on one date, summed over routes."""
-    totals: dict[int, float] = defaultdict(float)
-    for row in result.predictions:
-        if row["date"] == date:
-            totals[int(row["hour"])] += float(row["prediction"])
-    return totals
-
-
-def pick_date(result: ForecastResult, requested: str | None) -> str:
+def pick_date(result: ForecastResult, query: ForecastQuery, requested: str | None) -> str:
     dates = sorted({row["date"] for row in result.predictions})
     if not dates:
         raise ValidationException("Нет данных для выбранного периода")
-    if requested and requested in dates:
-        return requested
+    wanted = query.dataset_date(requested)
+    if wanted and wanted in dates:
+        return wanted
     return dates[0]
 
 
-def load_level(value: float, peak: float) -> str:
-    if peak <= 0:
-        return "low"
-    share = value / peak
-    return "high" if share >= 0.66 else "medium" if share >= 0.33 else "low"
+def stop_capacity(route_capacity: float, stops_on_route: int) -> float:
+    """Equal capacity for every stop of a route, so busier stops show a higher load."""
+    return route_capacity / max(stops_on_route, 1)
+
+
+def occupancy_pct(load: float, capacity: float) -> float:
+    return round(load / capacity * 100.0, 1) if capacity > 0 else 0.0
+
+
+def load_level(pct: float) -> str:
+    if pct >= LEVEL_HIGH_PCT:
+        return "high"
+    if pct >= LEVEL_MEDIUM_PCT:
+        return "medium"
+    return "low"
 
 
 def effect(series: list[dict]) -> dict:

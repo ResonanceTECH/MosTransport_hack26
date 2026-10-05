@@ -322,6 +322,8 @@ export interface components {
             level: components["schemas"]["LoadLevel"];
             sequence: number;
             baseline_load?: number;
+            /** @description Load as a percentage of the stop's hourly capacity */
+            occupancy_pct?: number;
         };
         ForecastMapResponse: {
             stops: components["schemas"]["MapStopLoad"][];
@@ -333,6 +335,8 @@ export interface components {
             stop_id: string;
             hour: number;
             value: number;
+            /** @description Load as a percentage of the stop's hourly capacity */
+            pct?: number;
         };
         HeatmapResponse: {
             stops: {
@@ -351,7 +355,10 @@ export interface components {
                 id: string;
                 name: string;
                 load: number;
+                occupancy_pct?: number;
             };
+            /** @description Average hourly load within the selected hours */
+            avg_hour_load?: number;
             delta_vs_baseline_percent?: number;
             meta: components["schemas"]["ForecastMeta"];
             effect?: components["schemas"]["CoefficientEffect"];
